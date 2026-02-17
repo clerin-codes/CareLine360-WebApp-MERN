@@ -1,18 +1,17 @@
-// models/Otp.js
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const otpSchema = new mongoose.Schema(
   {
-    target: { type: String, required: true }, // email or phone
-    purpose: { type: String, enum: ["VERIFY", "RESET_PASSWORD"], required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    purpose: { type: String, enum: ["EMAIL_VERIFY", "PASSWORD_RESET"], required: true },
     otpHash: { type: String, required: true },
     expiresAt: { type: Date, required: true },
-    attempts: { type: Number, default: 0 },
-    consumedAt: { type: Date },
+    attemptsLeft: { type: Number, default: 5 },
   },
   { timestamps: true }
 );
 
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // auto cleanup
+// auto delete old OTPs
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.model("Otp", otpSchema);
+module.exports = mongoose.model("Otp", otpSchema);
