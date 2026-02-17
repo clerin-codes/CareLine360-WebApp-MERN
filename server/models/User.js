@@ -1,5 +1,4 @@
-// models/User.js
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
@@ -10,15 +9,20 @@ const userSchema = new mongoose.Schema(
 
     passwordHash: { type: String, required: true },
 
-    isVerified: { type: Boolean, default: false }, // verification (locks fields after true)
-    isActive: { type: Boolean, default: true },    // soft delete
+    isVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
 
+    refreshTokenHash: { type: String },
     lastLoginAt: { type: Date },
 
-    // refresh token security (store hashed)
-    refreshTokenHash: { type: String },
+    status: { 
+      type: String, 
+      enum: ["ACTIVE", "PENDING", "REJECTED", "SUSPENDED"], 
+      default: "ACTIVE" 
+    },
+
   },
   { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+module.exports = mongoose.model("User", userSchema);

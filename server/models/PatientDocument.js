@@ -1,23 +1,36 @@
-// models/PatientDocument.js
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const patientDocumentSchema = new mongoose.Schema(
+const patientSchema = new mongoose.Schema(
   {
-    patientId: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    patientId: { type: String, required: true, unique: true }, // PAT-000001
+    fullName: { type: String, required: true, trim: true },
 
-    category: { type: String, enum: ["Lab Report", "Prescription", "Scan", "Other"], default: "Other" },
+    // optional fields (fill later)
+    dob: Date,
+    gender: { type: String, enum: ["male", "female", "other"] },
+    address: {
+      district: String,
+      city: String,
+      line1: String,
+    },
+    nic: String,
 
-    fileName: { type: String, required: true },
-    mimeType: { type: String },
-    sizeBytes: { type: Number },
+    emergencyContact: {
+      name: String,
+      phone: String,
+      relationship: String,
+    },
 
-    cloudinaryPublicId: { type: String, required: true },
-    fileUrl: { type: String, required: true },
+    bloodGroup: String,
+    allergies: [String],
+    chronicConditions: [String],
+    heightCm: Number,
+    weightKg: Number,
 
-    isDeleted: { type: Boolean, default: false }, // soft delete
-    deletedAt: { type: Date },
+    profileStrength: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("PatientDocument", patientDocumentSchema);
+module.exports = mongoose.model("Patient", patientSchema);
