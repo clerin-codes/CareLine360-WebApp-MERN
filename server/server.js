@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const patientRoutes = require("./routes/patientRoutes");
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(helmet());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/patients", patientRoutes);
 
 
 // Test Route

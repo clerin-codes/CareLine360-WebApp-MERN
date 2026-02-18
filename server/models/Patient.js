@@ -9,25 +9,27 @@ const patientSchema = new mongoose.Schema(
     dob: Date,
     gender: { type: String, enum: ["male", "female", "other"] },
     address: {
-      district: String,
-      city: String,
-      line1: String,
+      district: { type: String, required: true },
+      city: { type: String, required: true },
+      line1: { type: String, required: true },
     },
     nic: String,
 
     emergencyContact: {
-      name: String,
-      phone: String,
-      relationship: String,
+      name: { type: String, required: true },
+      phone: { type: String, required: true },
+      relationship: { type: String, required: true },
     },
 
-    bloodGroup: String,
+    bloodGroup: { type: String, match: /^(A|B|AB|O)[+-]$/i },
     allergies: [String],
     chronicConditions: [String],
-    heightCm: Number,
-    weightKg: Number,
+    heightCm: { type: Number, min: 30, max: 250 },
+    weightKg: { type: Number, min: 2, max: 300 },
 
     profileStrength: { type: Number, default: 0 },
+
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
