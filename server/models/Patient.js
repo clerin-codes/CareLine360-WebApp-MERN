@@ -6,6 +6,8 @@ const patientSchema = new mongoose.Schema(
     patientId: { type: String, required: true, unique: true },
     fullName: { type: String, required: true, trim: true },
 
+    avatarUrl: { type: String, default: "" },
+
     dob: Date,
     gender: { type: String, enum: ["male", "female", "other"] },
     address: {

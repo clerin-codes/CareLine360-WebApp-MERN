@@ -1,5 +1,7 @@
+require("dotenv").config();
+
 const express = require("express");
-const dotenv = require("dotenv");
+// const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
@@ -9,7 +11,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 
 // Load environment variables
-dotenv.config();
+// dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -36,11 +38,30 @@ app.get("/", (req, res) => {
 // const userRoutes = require("./routes/userRoutes");
 // app.use("/api/users", userRoutes);
 
-// Global error fallback
+
+
+
+// ✅ Multer / Cloudinary specific errors
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ message: "Server error" });
+  console.log("UPLOAD ERROR:", err);
+
+  if (err?.message?.includes("Only image files allowed")) {
+    return res.status(400).json({ message: "Only image files allowed" });
+  }
+
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ message: "Image too large (max 2MB)" });
+  }
+
+  return res.status(500).json({ message: err.message || "Server error" });
 });
+
+
+// Global error fallback
+// app.use((err, req, res, next) => {
+//   console.error(err);
+//   res.status(500).json({ message: "Server error" });
+// });
 
 const PORT = process.env.PORT || 5000;
 

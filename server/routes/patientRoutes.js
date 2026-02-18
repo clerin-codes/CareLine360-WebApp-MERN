@@ -1,6 +1,7 @@
 const express = require("express");
 const { authMiddleware, roleMiddleware } = require("../middleware/auth");
-const { getMyProfile , updateMyProfile } = require("../controllers/patientController");
+const { getMyProfile , updateMyProfile , uploadAvatar} = require("../controllers/patientController");
+const { imageUpload } = require("../middleware/upload");
 
 const router = express.Router();
 
@@ -9,7 +10,6 @@ router.get(
   authMiddleware,
   roleMiddleware(["patient"]),
   getMyProfile,
-  updateMyProfile
 );
 
 router.patch(
@@ -17,6 +17,14 @@ router.patch(
   authMiddleware, 
   roleMiddleware(["patient"]), 
   updateMyProfile
+);
+
+router.patch(
+  "/me/avatar",
+  authMiddleware,
+  roleMiddleware(["patient"]),
+  imageUpload.single("avatar"),
+  uploadAvatar
 );
 
 module.exports = router;

@@ -6,7 +6,7 @@ const getMyProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const patient = await Patient.findOne({ userId });
+    const patient = await Patient.findOne({ userId ,  $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],});
     if (!patient) return res.status(404).json({ message: "Profile not found" });
 
     const user = await User.findById(userId).select("email isVerified role");
@@ -29,6 +29,8 @@ const getMyProfile = async (req, res) => {
       email: user.email,
       isVerified: user.isVerified,
       role: user.role,
+
+      avatarUrl: patient.avatarUrl,
 
       dob: patient.dob,
       gender: patient.gender,
@@ -215,4 +217,35 @@ const updateMyProfile = async (req, res) => {
   }
 };
 
-module.exports = { getMyProfile, updateMyProfile };
+const uploadAvatar = async (req, res) => {
+  try {
+    console.log("AVATAR upload hit ✅");
+    console.log("req.file =", req.file); // ✅ add this
+
+    const userId = req.user.userId;
+
+    if (!req.file?.path) {
+      return res.status(400).json({ message: "No image uploaded" });
+    }
+
+    // multer-storage-cloudinary gives secure URL in req.file.path
+    const avatarUrl = req.file.path;
+    console.log("avatarUrl =", avatarUrl); // ✅ add this
+
+    const patient = await Patient.findOneAndUpdate(
+      { userId , $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }], },
+      { $set: { avatarUrl }  },
+      { returnDocument: "after", runValidators: true }
+    );
+
+    if (!patient) return res.status(404).json({ message: "Profile not found" });
+
+    return res.json({ message: "Avatar updated", avatarUrl });
+  } catch (e) {
+    console.error("UPLOAD AVATAR ERROR ❌", e);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+module.exports = { getMyProfile, updateMyProfile , uploadAvatar };
