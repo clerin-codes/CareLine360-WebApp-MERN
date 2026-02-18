@@ -152,11 +152,21 @@ export default function PatientDashboard() {
             </button>
 
             <a
-              href="/patient/profile"
-              className="w-9 h-9 rounded-full bg-white shadow-xl grid place-items-center transition-transform hover:scale-[1.03] active:scale-[0.98]"
-              title="Profile"
+            href="/patient/profile"
+            className="w-10 h-10 rounded-full overflow-hidden shadow-xl transition-transform hover:scale-[1.05] active:scale-[0.98] border border-gray-200"
+            title="Profile"
             >
-              <span className="text-lg">👤</span>
+            {me?.avatarUrl ? (
+                <img
+                src={me.avatarUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-sm">
+                👤
+                </div>
+            )}
             </a>
 
             <button

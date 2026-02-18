@@ -63,32 +63,28 @@ export default function Profile() {
   });
 
   // ✅ Avatar picker
-  const onPickAvatar = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const onPickAvatar = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setMsgType("error");
-      setMsg("Please upload an image file (jpg/png/webp).");
-      return;
-    }
+  // preview instantly
+  setAvatar(URL.createObjectURL(file));
 
-    if (file.size > 2 * 1024 * 1024) {
-      setMsgType("error");
-      setMsg("Image too large. Max 2MB.");
-      return;
-    }
+  try {
+    const fd = new FormData();
+    fd.append("avatar", file);
 
-    setAvatarFile(file);
+    const res = await api.patch("/patients/me/avatar", fd);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      setAvatar(base64);
-      localStorage.setItem("patientAvatar", base64);
-    };
-    reader.readAsDataURL(file);
-  };
+    setAvatar(res.data.avatarUrl); // final Cloudinary URL
+    setMsgType("success");
+    setMsg("✅ Profile photo updated");
+  } catch (err) {
+    setMsgType("error");
+    setMsg(err.response?.data?.message || "Avatar upload failed");
+  }
+};
+
 
   const removeAvatar = () => {
     setAvatar("");
@@ -111,6 +107,7 @@ export default function Profile() {
 
         const res = await api.get("/patients/me");
         const p = res.data;
+        setAvatar(p.avatarUrl || "");
 
         setForm({
           fullName: p.fullName || login.name || "",
@@ -363,7 +360,7 @@ export default function Profile() {
           <div className="flex items-center gap-5">
             <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center">
               {avatar ? (
-                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatar || form.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-3xl">👤</span>
               )}
