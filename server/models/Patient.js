@@ -11,16 +11,16 @@ const patientSchema = new mongoose.Schema(
     dob: Date,
     gender: { type: String, enum: ["male", "female", "other"] },
     address: {
-      district: { type: String, required: true },
-      city: { type: String, required: true },
-      line1: { type: String, required: true },
+      district: { type: String, default: "" },
+      city: { type: String, default: "" },
+      line1: { type: String, default: "" },
     },
     nic: String,
 
     emergencyContact: {
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
-      relationship: { type: String, required: true },
+      name: { type: String, default: "" },
+      phone: { type: String, default: "" },
+      relationship: { type: String, default: "" },
     },
 
     bloodGroup: { type: String, match: /^(A|B|AB|O)[+-]$/i },
