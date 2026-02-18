@@ -4,7 +4,12 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-// import PatientDashboard from "./pages/patient/PatientDashboard";
+import PatientDashboard from "./pages/patient/PatientDashboard";
+import Profile from "./pages/patient/Profile";
+import Documents from "./pages/patient/Documents";
+
+
+
 // import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 // import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -22,11 +27,13 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
           <Route path="/patient/dashboard" element={<PatientDashboard />} />
+          <Route path="/patient/profile" element={<Profile />} />
+          <Route path="/patient/documents" element={<Documents />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
+        {/* <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         </Route>
 
