@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/axios";
+import PatientNavbar from "./PatientNavbar";
 
 /**
  * Try to get name/email from whatever you saved at login.
@@ -307,7 +308,8 @@ export default function Profile() {
   if (loading) return <div className="p-6">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-[#f6fbff] to-white bg-[url('/')] bg-cover bg-center p-6">
+      <PatientNavbar />
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-5">
