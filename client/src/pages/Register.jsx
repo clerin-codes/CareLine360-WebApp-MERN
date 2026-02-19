@@ -16,7 +16,7 @@ export default function Register() {
     setMsg("");
 
     try {
-      const res = await api.post("/auth/register", { role, fullName, identifier, password });
+      const res = await api.post("/auth/register", { role, fullName, identifier: identifier.trim(), password });
 
       // Doctor: no tokens (PENDING)
       if (role === "doctor") {

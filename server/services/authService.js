@@ -18,13 +18,16 @@ const getNextPatientId = async () => {
 
 // Register for patient & doctor only (doctor = PENDING, no tokens)
 const registerUser = async ({ identifier, password, fullName, role }) => {
+  // Normalize identifier to avoid whitespace / formatting issues
+  const rawIdentifier = (identifier || "").trim();
+
   if (!["patient", "doctor"].includes(role)) {
     return { status: 400, data: { message: "Only patient or doctor can self-register" } };
   }
 
-  const isEmail = identifier.includes("@");
-  const email = isEmail ? identifier.toLowerCase() : undefined;
-  const phone = !isEmail ? identifier : undefined;
+  const isEmail = rawIdentifier.includes("@");
+  const email = isEmail ? rawIdentifier.toLowerCase() : undefined;
+  const phone = !isEmail ? rawIdentifier : undefined;
 
   const existing = await User.findOne(isEmail ? { email } : { phone });
   if (existing) return { status: 409, data: { message: "User already exists" } };
@@ -73,9 +76,12 @@ const registerUser = async ({ identifier, password, fullName, role }) => {
 };
 
 const loginUser = async ({ identifier, password }) => {
-  const query = identifier.includes("@")
-    ? { email: identifier.toLowerCase() }
-    : { phone: identifier };
+  // Normalize identifier to avoid whitespace / casing issues
+  const rawIdentifier = (identifier || "").trim();
+
+  const query = rawIdentifier.includes("@")
+    ? { email: rawIdentifier.toLowerCase() }
+    : { phone: rawIdentifier };
 
   const user = await User.findOne(query);
   if (!user) return { status: 401, data: { message: "Invalid credentials" } };
