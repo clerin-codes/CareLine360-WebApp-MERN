@@ -14,7 +14,7 @@ export default function Login() {
     setMsg("");
 
     try {
-      const res = await api.post("/auth/login", { identifier, password });
+      const res = await api.post("/auth/login", { identifier: identifier.trim(), password });
       setAuth(res.data);
 
       const role = res.data.user.role;

@@ -9,6 +9,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
+const documentRoutes = require("./routes/documentRoutes");
 
 // Load environment variables
 // dotenv.config();
@@ -27,6 +28,7 @@ app.use(helmet());
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
+app.use("/api/documents", documentRoutes);
 
 
 // Test Route
@@ -47,6 +49,10 @@ app.use((err, req, res, next) => {
 
   if (err?.message?.includes("Only image files allowed")) {
     return res.status(400).json({ message: "Only image files allowed" });
+  }
+
+  if (err?.message?.includes("Only PDF, images, DOC, DOCX allowed")) {
+    return res.status(400).json({ message: "Only PDF, images, DOC, DOCX allowed" });
   }
 
   if (err?.code === "LIMIT_FILE_SIZE") {
