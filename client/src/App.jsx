@@ -7,6 +7,7 @@ import ResetPassword from "./pages/ResetPassword";
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import Profile from "./pages/patient/Profile";
 import Documents from "./pages/patient/Documents";
+import PatientNavbar from "./pages/patient/PatientNavbar";
 
 
 
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/patient/dashboard" element={<PatientDashboard />} />
           <Route path="/patient/profile" element={<Profile />} />
           <Route path="/patient/documents" element={<Documents />} />
+          <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
         </Route>
 
         {/* <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
