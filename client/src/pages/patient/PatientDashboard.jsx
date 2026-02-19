@@ -77,19 +77,19 @@ export default function PatientDashboard() {
       <div className="min-h-screen bg-gradient-to-b from-[#f6fbff] to-white p-6">
         <div className="max-w-6xl mx-auto">
           <motion.div
-            className="h-16 rounded-3xl bg-white/70 border shadow-sm"
+            className="h-16 rounded-3xl bg-white/70 shadow-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           />
           <div className="mt-6 grid lg:grid-cols-12 gap-5">
             <motion.div
-              className="lg:col-span-7 h-[520px] rounded-3xl bg-white border shadow-sm"
+              className="lg:col-span-7 h-[520px] rounded-3xl bg-white shadow-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
             />
             <motion.div
-              className="lg:col-span-5 h-[520px] rounded-3xl bg-white border shadow-sm"
+              className="lg:col-span-5 h-[520px] rounded-3xl bg-white shadow-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.18 }}

@@ -49,6 +49,7 @@ export default function PatientNavbar() {
           className="flex items-center gap-3"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35 }}
         >
           <div className="w-9 h-9 rounded-full bg-gray-600/10 flex items-center justify-center">
             <div className="w-3 h-3 rounded-full bg-black" />
@@ -88,14 +89,15 @@ export default function PatientNavbar() {
           className="flex items-center gap-3"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35 }}
         >
-          <button className="w-9 h-9 rounded-full bg-white shadow grid place-items-center">
+          <button className="w-9 h-9 rounded-full bg-white shadow-xl grid place-items-center transition-transform hover:scale-[1.03] active:scale-[0.98]">
             🔔
           </button>
 
           <a
             href="/patient/profile"
-            className="w-10 h-10 rounded-full overflow-hidden border border-gray-200"
+            className="w-10 h-10 rounded-full overflow-hidden shadow-xl transition-transform hover:scale-[1.05] active:scale-[0.98] border border-gray-200"
             title="Profile"
           >
             {me?.avatarUrl ? (
@@ -114,7 +116,7 @@ export default function PatientNavbar() {
 
           <button
             onClick={handleLogout}
-            className="px-4 py-2 rounded-full bg-black text-white text-sm"
+            className="px-4 py-2 rounded-full bg-black text-white text-sm shadow-xl hover:opacity-95 transition active:scale-[0.98]"
           >
             Logout
           </button>
