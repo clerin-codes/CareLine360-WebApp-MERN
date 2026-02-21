@@ -1,48 +1,62 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "./context/ThemeContext";
+
+// Auth Pages
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+// Patient Pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import Profile from "./pages/patient/Profile";
 import Documents from "./pages/patient/Documents";
 import PatientNavbar from "./pages/patient/PatientNavbar";
 
+// Doctor Module
+import DashboardLayout from "./components/layout/DashboardLayout";
+import DashboardPage from "./pages/DashboardPage";
 
-
-// import DoctorDashboard from "./pages/doctor/DoctorDashboard";
-// import AdminDashboard from "./pages/admin/AdminDashboard";
+// Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<div className="p-6">Landing</div>} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Landing */}
+          <Route path="/" element={<div className="p-6">Landing</div>} />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+          {/* Auth */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+          {/* Patient Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
+            <Route path="/patient/dashboard" element={<PatientDashboard />} />
+            <Route path="/patient/profile" element={<Profile />} />
+            <Route path="/patient/documents" element={<Documents />} />
+            <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
+          </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
-          <Route path="/patient/dashboard" element={<PatientDashboard />} />
-          <Route path="/patient/profile" element={<Profile />} />
-          <Route path="/patient/documents" element={<Documents />} />
-          <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
-        </Route>
-
-        {/* <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
-          <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-        </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        </Route> */}
-      </Routes>
-    </BrowserRouter>
+          {/* Doctor Dashboard */}
+          <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
+            <Route
+              path="/doctor/dashboard"
+              element={
+                <DashboardLayout>
+                  <DashboardPage />
+                </DashboardLayout>
+              }
+            />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
