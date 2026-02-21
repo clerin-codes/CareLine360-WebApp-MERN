@@ -8,6 +8,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
+import LandingPage from "./pages/LandingPage";
+
 // Patient Pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import Profile from "./pages/patient/Profile";
@@ -27,7 +29,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Landing */}
-          <Route path="/" element={<div className="p-6">Landing</div>} />
+          <Route path="/" element={<LandingPage />} />
 
           {/* Auth */}
           <Route path="/login" element={<Login />} />
