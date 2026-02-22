@@ -3,14 +3,62 @@ const EmergencyCase = require('../models/EmergencyCase');
 
 class AdminService {
     async getAllUsers() {
-        return await User.find().sort({ createdAt: -1 });
+        return await User.aggregate([
+            {
+                $lookup: {
+                    from: 'patients',
+                    localField: '_id',
+                    foreignField: 'userId',
+                    as: 'patientProfile'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'doctors',
+                    localField: '_id',
+                    foreignField: 'userId',
+                    as: 'doctorProfile'
+                }
+            },
+            {
+                $addFields: {
+                    profile: {
+                        $cond: {
+                            if: { $gt: [{ $size: '$patientProfile' }, 0] },
+                            then: { $arrayElemAt: ['$patientProfile', 0] },
+                            else: {
+                                $cond: {
+                                    if: { $gt: [{ $size: '$doctorProfile' }, 0] },
+                                    then: { $arrayElemAt: ['$doctorProfile', 0] },
+                                    else: null
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    name: { $ifNull: ['$profile.fullName', '$fullName'] },
+                    avatarUrl: { $ifNull: ['$profile.avatarUrl', null] },
+                    phone: { $ifNull: ['$phone', '$profile.phone'] }
+                }
+            },
+            {
+                $project: {
+                    patientProfile: 0,
+                    doctorProfile: 0
+                }
+            },
+            { $sort: { createdAt: -1 } }
+        ]);
     }
 
     async toggleUserStatus(id) {
         const user = await User.findById(id);
         if (!user) throw new Error('User not found');
 
-        const newStatus = user.status === 'active' ? 'inactive' : 'active';
+        const newStatus = user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
         return await User.findByIdAndUpdate(
             id,
             { status: newStatus },

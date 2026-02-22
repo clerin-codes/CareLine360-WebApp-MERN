@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const documentRoutes = require("./routes/documentRoutes");
+const emergencyRoutes = require("./routes/emergencyRoutes");
 
 // Connect to MongoDB
 connectDB();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/emergency", emergencyRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
@@ -54,9 +56,14 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
+const start = async () => {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  });
+};
+
+start();
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {

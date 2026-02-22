@@ -1,11 +1,183 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Patient = require("../models/Patient");
+const Doctor = require("../models/Doctor");
+const EmergencyCase = require("../models/EmergencyCase");
 
 const listPendingDoctors = async () => {
   const doctors = await User.find({ role: "doctor", status: "PENDING", isActive: true }).select(
     "-passwordHash -refreshTokenHash"
   );
   return { status: 200, data: doctors };
+};
+
+const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
+  const skip = (page - 1) * limit;
+
+  const query = {};
+  if (role !== "all") {
+    query.role = role;
+  }
+
+  // We use aggregation to join with Patient and Doctor details
+  const pipeline = [
+    { $match: query },
+    {
+      $lookup: {
+        from: "patients",
+        localField: "_id",
+        foreignField: "userId",
+        as: "patientProfile"
+      }
+    },
+    {
+      $lookup: {
+        from: "doctors",
+        localField: "_id",
+        foreignField: "userId",
+        as: "doctorProfile"
+      }
+    },
+    {
+      $addFields: {
+        profile: {
+          $cond: {
+            if: { $eq: ["$role", "patient"] },
+            then: { $arrayElemAt: ["$patientProfile", 0] },
+            else: {
+              $cond: {
+                if: { $eq: ["$role", "doctor"] },
+                then: { $arrayElemAt: ["$doctorProfile", 0] },
+                else: null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      $addFields: {
+        displayName: {
+          $ifNull: ["$profile.fullName", { $ifNull: ["$fullName", "No Name"] }]
+        },
+        avatarUrl: {
+          $ifNull: ["$profile.avatarUrl", ""]
+        }
+      }
+    },
+    {
+      $project: {
+        passwordHash: 0,
+        refreshTokenHash: 0,
+        patientProfile: 0,
+        doctorProfile: 0
+      }
+    }
+  ];
+
+  // Handle Search in Aggregation
+  if (search) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { displayName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { phone: { $regex: search, $options: "i" } }
+        ]
+      }
+    });
+  }
+
+  pipeline.push({ $sort: { createdAt: -1 } });
+
+  // For total count we need a separate aggregation or dynamic skip/limit
+  const totalResults = await User.aggregate([...pipeline, { $count: "total" }]);
+  const total = totalResults.length > 0 ? totalResults[0].total : 0;
+
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: limit });
+
+  const users = await User.aggregate(pipeline);
+
+  const mappedUsers = users.map(u => ({
+    ...u,
+    name: u.displayName // frontend compatibility
+  }));
+
+  return {
+    status: 200,
+    data: {
+      users: mappedUsers,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page
+    }
+  };
+};
+
+const toggleUserStatus = async (id) => {
+  const user = await User.findById(id);
+  if (!user) return { status: 404, data: { message: "User not found" } };
+
+  const newStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+  user.status = newStatus;
+  await user.save();
+
+  return { status: 200, data: user };
+};
+
+const deleteUser = async (id) => {
+  const user = await User.findByIdAndDelete(id);
+  if (!user) return { status: 404, data: { message: "User not found" } };
+  return { status: 200, data: { message: "User deleted successfully" } };
+};
+
+const getStats = async () => {
+  const totalUsers = await User.countDocuments();
+  const totalPatients = await User.countDocuments({ role: "patient" });
+  const totalDoctors = await User.countDocuments({ role: "doctor" });
+  const totalResponders = await User.countDocuments({ role: "responder" });
+
+  const totalEmergencies = await EmergencyCase.countDocuments();
+  const resolvedEmergencies = await EmergencyCase.countDocuments({ status: "RESOLVED" });
+
+  const avgResponseTimeResult = await EmergencyCase.aggregate([
+    { $match: { status: "RESOLVED", responseTime: { $exists: true } } },
+    { $group: { _id: null, avgTime: { $avg: "$responseTime" } } },
+  ]);
+
+  const avgResponseTime = avgResponseTimeResult.length > 0 ? Math.round(avgResponseTimeResult[0].avgTime) : 0;
+
+  const statusBreakdown = await EmergencyCase.aggregate([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+
+  const emergencyStatusBreakdown = {
+    PENDING: 0,
+    DISPATCHED: 0,
+    ARRIVED: 0,
+    RESOLVED: 0,
+  };
+
+  statusBreakdown.forEach((item) => {
+    if (emergencyStatusBreakdown.hasOwnProperty(item._id)) {
+      emergencyStatusBreakdown[item._id] = item.count;
+    }
+  });
+
+  return {
+    status: 200,
+    data: {
+      totalUsers,
+      totalPatients,
+      totalDoctors,
+      totalResponders,
+      totalEmergencies,
+      resolvedEmergencies,
+      avgResponseTime,
+      emergencyStatusBreakdown,
+    }
+  };
 };
 
 const updateUserStatus = async ({ userId, status }) => {
@@ -20,7 +192,8 @@ const updateUserStatus = async ({ userId, status }) => {
   return { status: 200, data: { message: "Status updated", user } };
 };
 
-const createResponder = async ({ email, phone, password }) => {
+const createUser = async (userData) => {
+  const { email, phone, password, role, fullName } = userData;
   if (!email && !phone) return { status: 400, data: { message: "Email or phone required" } };
 
   const existing = await User.findOne(email ? { email: email.toLowerCase() } : { phone });
@@ -29,8 +202,9 @@ const createResponder = async ({ email, phone, password }) => {
   const passwordHash = await bcrypt.hash(password, 10);
 
   const user = await User.create({
-    role: "responder",
+    role: role || "patient",
     status: "ACTIVE",
+    fullName,
     email: email ? email.toLowerCase() : undefined,
     phone: phone || undefined,
     passwordHash,
@@ -39,10 +213,18 @@ const createResponder = async ({ email, phone, password }) => {
   return {
     status: 201,
     data: {
-      message: "Responder created",
-      user: { id: user._id, role: user.role, email: user.email, phone: user.phone, status: user.status },
+      message: "User created successfully",
+      user: { id: user._id, role: user.role, email: user.email, phone: user.phone, status: user.status, fullName: user.fullName },
     },
   };
 };
 
-module.exports = { listPendingDoctors, updateUserStatus, createResponder };
+module.exports = {
+  listPendingDoctors,
+  updateUserStatus,
+  createUser,
+  getAllUsers,
+  toggleUserStatus,
+  deleteUser,
+  getStats
+};
