@@ -14,6 +14,7 @@ const ManageUsers = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [doctorReviews, setDoctorReviews] = useState([]);
 
     // Add User Form State
     const [formData, setFormData] = useState({
@@ -31,6 +32,16 @@ const ManageUsers = () => {
 
         return () => clearTimeout(delayDebounceFn);
     }, [page, searchTerm, roleFilter]);
+
+    useEffect(() => {
+        if (selectedUser && selectedUser.role === 'doctor') {
+            api.get(`/ratings/doctor/${selectedUser._id}`)
+                .then(res => setDoctorReviews(res.data.reviews || []))
+                .catch(() => setDoctorReviews([]));
+        } else {
+            setDoctorReviews([]);
+        }
+    }, [selectedUser]);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -497,6 +508,27 @@ const ManageUsers = () => {
                                                     )) : (
                                                         <p className="text-xs text-slate-400 italic p-4 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">No indexed availability slots</p>
                                                     )}
+                                                </div>
+                                            </section>
+
+                                            {/* Recent Reviews Section */}
+                                            <section>
+                                                <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <Activity size={14} className="text-teal-500" />
+                                                    Recent Reviews
+                                                </h4>
+                                                <div className="space-y-4">
+                                                    {doctorReviews.length === 0 ? (
+                                                        <p className="text-xs text-slate-400 italic">No reviews found for this doctor.</p>
+                                                    ) : doctorReviews.map((r, i) => (
+                                                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-xs font-bold text-emerald-600">{r.rating}★</span>
+                                                                <span className="text-xs text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</span>
+                                                            </div>
+                                                            <p className="text-sm text-slate-700 dark:text-slate-300 italic">"{r.review}"</p>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </section>
                                         </>

@@ -8,7 +8,9 @@ const {
   getAllUsers,
   toggleUserStatus,
   deleteUser,
-  getStats
+  getStats,
+  getAppointments,
+  createMeetingLink
 } = require("../controllers/adminController");
 
 const router = express.Router();
@@ -18,9 +20,12 @@ router.use(authMiddleware, roleMiddleware(["admin"]));
 
 router.get("/doctors/pending", getPendingDoctors);
 router.get("/users", getAllUsers);
+router.get("/appointments", getAppointments);
+router.post("/appointments/:id/meeting", createMeetingLink);
 router.patch("/users/:id/toggle-status", toggleUserStatus);
 router.delete("/users/:id", deleteUser);
 router.get("/stats", getStats);
+
 
 router.patch(
   "/users/:id/status",

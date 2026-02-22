@@ -29,6 +29,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import ManageUsers from "./pages/admin/ManageUsers";
 import EmergencyMonitoring from "./pages/admin/EmergencyMonitoring";
 import Analytics from "./pages/admin/Analytics";
+import MeetAssign from "./pages/admin/MeetAssign";
+
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -73,8 +75,10 @@ export default function App() {
             <Route path="/admin/dashboard" element={<MainLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="users" element={<ManageUsers />} />
+              <Route path="meet-assign" element={<MeetAssign />} />
               <Route path="emergencies" element={<EmergencyMonitoring />} />
               <Route path="analytics" element={<Analytics />} />
+
             </Route>
           </Route>
         </Routes>

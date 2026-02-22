@@ -3,6 +3,8 @@ const User = require("../models/User");
 const Patient = require("../models/Patient");
 const Doctor = require("../models/Doctor");
 const EmergencyCase = require("../models/EmergencyCase");
+const Appointment = require("../models/Appointment");
+
 
 const listPendingDoctors = async () => {
   const doctors = await User.find({ role: "doctor", status: "PENDING", isActive: true }).select(
@@ -215,6 +217,32 @@ const createUser = async (userData) => {
   };
 };
 
+const getAppointments = async () => {
+  const appointments = await Appointment.find({})
+    .populate("patient", "fullName email phone")
+    .populate("doctor", "fullName email phone specialty")
+    .sort({ createdAt: -1 });
+  return { status: 200, data: appointments };
+};
+
+const createMeetingLink = async (appointmentId) => {
+  const roomName = `CareLine360-${appointmentId}`;
+  const meetingUrl = `https://meet.jit.si/${roomName}`;
+
+  const appt = await Appointment.findByIdAndUpdate(
+    appointmentId,
+    { meetingUrl },
+    { new: true }
+  )
+    .populate("patient", "fullName email phone")
+    .populate("doctor", "fullName email phone specialty");
+
+  if (!appt) return { status: 404, data: { message: "Appointment not found" } };
+
+  return { status: 200, data: appt };
+};
+
+
 module.exports = {
   listPendingDoctors,
   updateUserStatus,
@@ -222,5 +250,8 @@ module.exports = {
   getAllUsers,
   toggleUserStatus,
   deleteUser,
-  getStats
+  getStats,
+  getAppointments,
+  createMeetingLink
 };
+
