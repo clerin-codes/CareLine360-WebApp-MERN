@@ -351,7 +351,7 @@ const ManageUsers = () => {
                                     onChange={handleInputChange}
                                 >
                                     <option value="patient">Patient</option>
-                                    <option value="doctor">Medical Professional</option>
+                                    <option value="doctor">Doctor</option>
                                     <option value="responder">Responder</option>
                                     <option value="admin">Administrator</option>
                                 </select>
