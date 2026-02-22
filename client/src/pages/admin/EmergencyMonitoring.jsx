@@ -32,12 +32,25 @@ const StatusBadge = ({ status }) => {
 const EmergencyMonitoring = () => {
     const [emergencies, setEmergencies] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('monitor');
+    const [hospitals, setHospitals] = useState([]);
+    const [newHospital, setNewHospital] = useState({ name: '', address: '', contact: '', lat: '', lng: '' });
     const [selectedEmergency, setSelectedEmergency] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         fetchEmergencies();
+        fetchHospitals();
     }, []);
+
+    const fetchHospitals = async () => {
+        try {
+            const response = await api.get('/hospitals');
+            setHospitals(response.data.data);
+        } catch (error) {
+            console.error('Failed to load hospitals');
+        }
+    };
 
     const fetchEmergencies = async () => {
         try {
@@ -63,9 +76,49 @@ const EmergencyMonitoring = () => {
         }
     };
 
+    const handleNewHospitalChange = (field, value) => {
+        setNewHospital(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleFetchLocation = () => {
+        if (!navigator.geolocation) {
+            toast.error('Geolocation not supported by this browser');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const { latitude, longitude } = pos.coords;
+            setNewHospital(prev => ({ ...prev, lat: String(latitude), lng: String(longitude) }));
+            toast.success('Location fetched');
+        }, (err) => {
+            toast.error('Unable to retrieve location');
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    };
+
     const openModal = (emergency) => {
         setSelectedEmergency(emergency);
         setIsModalOpen(true);
+    };
+
+    const handleAddHospital = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await api.post('/hospitals', newHospital);
+            setHospitals([response.data.data, ...hospitals]);
+            setNewHospital({ name: '', address: '', contact: '', lat: '', lng: '' });
+            toast.success('Hospital added to database');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to add hospital');
+        }
+    };
+
+    const handleRemoveHospital = async (id) => {
+        try {
+            await api.delete(`/hospitals/${id}`);
+            setHospitals(hospitals.filter(h => h._id !== id));
+            toast.success('Hospital removed');
+        } catch (error) {
+            toast.error('Failed to remove hospital');
+        }
     };
 
     if (loading) return (
@@ -88,80 +141,128 @@ const EmergencyMonitoring = () => {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">
-                            <tr>
-                                <th className="py-4 px-6">Case Subject</th>
-                                <th className="py-4 px-6">Registry Timestamp</th>
-                                <th className="py-4 px-6">Condition</th>
-                                <th className="py-4 px-6">Spatial Node</th>
-                                <th className="py-4 px-6 text-right">Dispatch Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {emergencies.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" className="py-20 text-center text-slate-500 italic font-medium">No active or historical emergency cases discovered.</td>
-                                </tr>
-                            ) : emergencies.map((e) => (
-                                <tr
-                                    key={e._id}
-                                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
-                                    onClick={() => openModal(e)}
-                                >
-                                    <td className="py-5 px-6">
-                                        <div className="font-bold text-slate-900 dark:text-white text-base">{e.patient?.fullName || 'Anonymous Patient'}</div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-500 font-medium max-w-[280px] truncate italic">"{e.description}"</div>
-                                    </td>
-                                    <td className="py-5 px-6">
-                                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                            <Calendar size={14} className="text-slate-400" />
-                                            {safeFormatDate(e.triggeredAt, 'HH:mm — MMM dd')}
-                                        </div>
-                                    </td>
-                                    <td className="py-5 px-6">
-                                        <StatusBadge status={e.status} />
-                                    </td>
-                                    <td className="py-5 px-6">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 group">
-                                            <MapPin size={14} className="text-teal-500" />
-                                            <span className="font-mono tracking-tighter">{e.latitude.toFixed(5)}, {e.longitude.toFixed(5)}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-5 px-6 text-right" onClick={(event) => event.stopPropagation()}>
-                                        <select
-                                            value={e.status}
-                                            onChange={(event) => updateStatus(e._id, event.target.value)}
-                                            className="text-[11px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 outline-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all cursor-pointer"
-                                        >
-                                            <option value="PENDING">SET PENDING</option>
-                                            <option value="DISPATCHED">DISPATCH HELP</option>
-                                            <option value="ARRIVED">MARK ARRIVED</option>
-                                            <option value="RESOLVED">CLOSE CASE</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="flex items-center gap-4">
+                <div className={`px-4 py-2 rounded-lg cursor-pointer ${activeTab === 'monitor' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`} onClick={() => setActiveTab('monitor')}>Monitor</div>
+                <div className={`px-4 py-2 rounded-lg cursor-pointer ${activeTab === 'config' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-slate-400'}`} onClick={() => setActiveTab('config')}>Config</div>
             </div>
+
+            {activeTab === 'monitor' && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden text-left">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">
+                                <tr>
+                                    <th className="py-4 px-6">Case Subject</th>
+                                    <th className="py-4 px-6">Registry Timestamp</th>
+                                    <th className="py-4 px-6">Condition</th>
+                                    <th className="py-4 px-6">Spatial Node</th>
+                                    <th className="py-4 px-6 text-right">Dispatch Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {emergencies.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="py-20 text-center text-slate-500 italic font-medium">No active or historical emergency cases discovered.</td>
+                                    </tr>
+                                ) : emergencies.map((e) => (
+                                    <tr
+                                        key={e._id}
+                                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                                        onClick={() => openModal(e)}
+                                    >
+                                        <td className="py-5 px-6">
+                                            <div className="font-bold text-slate-900 dark:text-white text-base">{e.patient?.fullName || 'Anonymous Patient'}</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-500 font-medium max-w-[280px] truncate italic">"{e.description}"</div>
+                                        </td>
+                                        <td className="py-5 px-6">
+                                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                <Calendar size={14} className="text-slate-400" />
+                                                {safeFormatDate(e.triggeredAt, 'HH:mm — MMM dd')}
+                                            </div>
+                                        </td>
+                                        <td className="py-5 px-6">
+                                            <StatusBadge status={e.status} />
+                                        </td>
+                                        <td className="py-5 px-6">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 group">
+                                                <MapPin size={14} className="text-teal-500" />
+                                                <span className="font-mono tracking-tighter">{e.latitude?.toFixed(5) || 0}, {e.longitude?.toFixed(5) || 0}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-5 px-6 text-right" onClick={(event) => event.stopPropagation()}>
+                                            <select
+                                                value={e.status}
+                                                onChange={(event) => updateStatus(e._id, event.target.value)}
+                                                className="text-[11px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 outline-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all cursor-pointer"
+                                            >
+                                                <option value="PENDING">SET PENDING</option>
+                                                <option value="DISPATCHED">DISPATCH HELP</option>
+                                                <option value="ARRIVED">MARK ARRIVED</option>
+                                                <option value="RESOLVED">CLOSE CASE</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'config' && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden text-left p-6">
+                    <h3 className="text-lg font-bold mb-4">Config — Manage Hospitals</h3>
+                    <form onSubmit={handleAddHospital} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <input value={newHospital.name} onChange={(e) => handleNewHospitalChange('name', e.target.value)} placeholder="Hospital name" className="p-3 border rounded-lg" />
+                        <input value={newHospital.contact} onChange={(e) => handleNewHospitalChange('contact', e.target.value)} placeholder="Contact (phone/email)" className="p-3 border rounded-lg" />
+                        <input value={newHospital.address} onChange={(e) => handleNewHospitalChange('address', e.target.value)} placeholder="Address" className="p-3 border rounded-lg md:col-span-2" />
+                        <input value={newHospital.lat} onChange={(e) => handleNewHospitalChange('lat', e.target.value)} placeholder="Latitude" className="p-3 border rounded-lg" />
+                        <input value={newHospital.lng} onChange={(e) => handleNewHospitalChange('lng', e.target.value)} placeholder="Longitude" className="p-3 border rounded-lg" />
+                        <div className="flex items-center gap-2 md:col-span-2">
+                            <button type="button" onClick={handleFetchLocation} className="px-4 py-2 rounded-xl bg-teal-600 text-white">Use Current Location</button>
+                            <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 text-white">Add Hospital</button>
+                            <button type="button" onClick={() => { setNewHospital({ name: '', address: '', contact: '', lat: '', lng: '' }); }} className="px-4 py-2 rounded-xl border">Reset</button>
+                        </div>
+                    </form>
+
+                    <div>
+                        <h4 className="text-sm font-bold mb-2">Saved Hospitals (MongoDB)</h4>
+                        {hospitals.length === 0 ? (
+                            <p className="text-slate-500 italic">No hospitals saved in database.</p>
+                        ) : (
+                            <ul className="space-y-3">
+                                {hospitals.map(h => (
+                                    <li key={h._id} className="p-3 border rounded-lg flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold">{h.name}</div>
+                                            <div className="text-xs text-slate-500">{h.address}</div>
+                                            <div className="text-xs text-slate-500">{h.contact}</div>
+                                            <div className="text-xs text-mono text-slate-500 mt-1">{h.lat.toFixed ? h.lat.toFixed(6) : h.lat}, {h.lng.toFixed ? h.lng.toFixed(6) : h.lng}</div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <button onClick={() => handleRemoveHospital(h._id)} className="px-3 py-1 rounded bg-rose-500 text-white text-sm">Remove</button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Rescue Detail Modal */}
             {isModalOpen && selectedEmergency && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}></div>
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}></div>
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
 
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 text-left">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 text-left shrink-0">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-rose-500/10 text-rose-600 rounded-2xl shadow-inner">
-                                    <AlertTriangle size={28} />
+                                <div className="p-2.5 bg-rose-500/10 text-rose-600 rounded-xl shadow-inner">
+                                    <AlertTriangle size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                                         Rescue Operations Case
                                         <StatusBadge status={selectedEmergency.status} />
                                     </h3>
@@ -169,88 +270,85 @@ const EmergencyMonitoring = () => {
                                 </div>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400">
-                                <X size={24} />
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-10 scrollbar-none">
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                                <div className="lg:col-span-5 space-y-8 text-left">
-                                    <div className="bg-slate-50 dark:bg-slate-950 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-inner space-y-6">
-                                        <div className="flex items-start gap-5">
-                                            <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-teal-600 shadow-sm"><User size={24} /></div>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                                <div className="lg:col-span-5 space-y-6 text-left">
+                                    <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner space-y-5">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-teal-600 shadow-sm"><User size={20} /></div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Subject Identity</p>
-                                                <p className="font-black text-xl text-slate-900 dark:text-white">{selectedEmergency.patient?.fullName || 'Unknown Object'}</p>
-                                                <div className="flex items-center gap-2 text-sm font-bold text-slate-500 mt-2">
-                                                    <Phone size={14} className="text-teal-500" /> {selectedEmergency.patient?.phone || 'No Secure Line'}
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Subject Identity</p>
+                                                <p className="font-bold text-lg text-slate-900 dark:text-white">{selectedEmergency.patient?.fullName || 'Unknown Object'}</p>
+                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1">
+                                                    <Phone size={12} className="text-teal-500" /> {selectedEmergency.patient?.phone || 'No Secure Line'}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-start gap-5">
-                                            <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-teal-600 shadow-sm"><Calendar size={24} /></div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-teal-600 shadow-sm"><Calendar size={20} /></div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Incident Timeline</p>
-                                                <div className="space-y-1 mt-1">
-                                                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Start: <span className="font-mono">{safeFormatDate(selectedEmergency.triggeredAt, 'HH:mm:ss — MMM dd')}</span></p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Incident Timeline</p>
+                                                <div className="space-y-0.5 mt-1">
+                                                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Started: <span className="font-mono">{safeFormatDate(selectedEmergency.triggeredAt, 'HH:mm:ss — MMM dd')}</span></p>
                                                     {selectedEmergency.resolvedAt && (
-                                                        <p className="text-xs font-bold text-emerald-600">Resolution: <span className="font-mono">{safeFormatDate(selectedEmergency.resolvedAt, 'HH:mm:ss — MMM dd')}</span></p>
+                                                        <p className="text-xs font-bold text-emerald-600">Resolved: <span className="font-mono">{safeFormatDate(selectedEmergency.resolvedAt, 'HH:mm:ss — MMM dd')}</span></p>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {selectedEmergency.responseTime && (
-                                            <div className="bg-emerald-500/10 dark:bg-emerald-400/10 p-6 rounded-2xl border border-emerald-500/20 flex flex-col items-center gap-1 group overflow-hidden relative transition-all">
-                                                <div className="absolute -right-4 -top-4 opacity-5 group-hover:rotate-12 transition-transform">
-                                                    <Clock size={80} />
-                                                </div>
+                                            <div className="bg-emerald-500/10 dark:bg-emerald-400/10 p-5 rounded-xl border border-emerald-500/20 flex flex-col items-center gap-0.5 group overflow-hidden relative transition-all">
                                                 <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] relative">Network Response Delta</p>
-                                                <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 relative tracking-tighter">{selectedEmergency.responseTime}<span className="text-base ml-1">minutes</span></p>
+                                                <p className="text-3xl font-black text-emerald-700 dark:text-emerald-300 relative tracking-tighter">{selectedEmergency.responseTime}<span className="text-sm ml-1">minutes</span></p>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
                                             Patient Signal Context
                                         </h4>
-                                        <div className="p-8 bg-amber-50/40 dark:bg-amber-900/10 rounded-[2rem] text-slate-800 dark:text-amber-100/90 font-bold border border-amber-100/60 dark:border-amber-700/30 shadow-inner italic leading-relaxed text-lg text-center">
+                                        <div className="p-6 bg-amber-50/40 dark:bg-amber-900/10 rounded-2xl text-slate-800 dark:text-amber-100/90 font-bold border border-amber-100/60 dark:border-amber-700/30 shadow-inner italic leading-relaxed text-base text-center">
                                             "{selectedEmergency.description || 'No verbal signal detected.'}"
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="lg:col-span-7 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-teal-500"></div>
+                                <div className="lg:col-span-7 flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-3 px-2">
+                                        <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
                                             Spatial Telemetry Layer
                                         </h4>
-                                        <span className="text-xs font-mono font-bold text-slate-400 tracking-tighter">{selectedEmergency.latitude.toFixed(6)}, {selectedEmergency.longitude.toFixed(6)}</span>
+                                        <span className="text-[10px] font-mono font-bold text-slate-400 tracking-tighter">{selectedEmergency.latitude?.toFixed(6)}, {selectedEmergency.longitude?.toFixed(6)}</span>
                                     </div>
-                                    <div className="flex-1 min-h-[400px] rounded-[2.5rem] overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl relative">
+                                    <div className="flex-1 min-h-[350px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative">
                                         <EmergencyMap emergency={selectedEmergency} />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-end gap-4">
+                        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-end gap-3 shrink-0">
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="px-8 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95"
+                                className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95 text-sm"
                             >
-                                Dismiss Review
+                                Dismiss
                             </button>
                             {selectedEmergency.status !== 'RESOLVED' && (
                                 <button
                                     onClick={() => updateStatus(selectedEmergency._id, 'RESOLVED')}
-                                    className="px-8 py-3 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 active:scale-95"
+                                    className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 active:scale-95 text-sm"
                                 >
-                                    <CheckCircle2 size={20} /> Close Operation
+                                    <CheckCircle2 size={18} /> Close case
                                 </button>
                             )}
                         </div>

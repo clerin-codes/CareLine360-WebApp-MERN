@@ -10,6 +10,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const documentRoutes = require("./routes/documentRoutes");
 const emergencyRoutes = require("./routes/emergencyRoutes");
+const hospitalRoutes = require("./routes/hospitalRoutes");
 
 // Connect to MongoDB
 connectDB();
@@ -27,6 +28,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/emergency", emergencyRoutes);
+app.use("/api/hospitals", hospitalRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
