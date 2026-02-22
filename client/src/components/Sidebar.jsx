@@ -8,6 +8,7 @@ import { getFullName, clearAuth } from '../auth/authStorage';
 const Sidebar = () => {
     const [isDark, setIsDark] = useState(false);
     const fullName = getFullName();
+    const role = localStorage.getItem("role");
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -23,14 +24,20 @@ const Sidebar = () => {
         }
     }, [isDark]);
 
-    const menuItems = [
-        { path: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-        { path: '/admin/dashboard/emergencies', icon: <AlertCircle size={20} />, label: 'Emergencies' },
-        { path: '/admin/dashboard/users', icon: <Users size={20} />, label: 'Users' },
-        { path: '/admin/dashboard/meet-assign', icon: <Video size={20} />, label: 'Meet Assign' },
-        { path: '/admin/dashboard/analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
-
-    ];
+    let menuItems = [];
+    if (role === "responder") {
+        menuItems = [
+            { path: '/admin/dashboard/emergencies', icon: <AlertCircle size={20} />, label: 'Emergencies' },
+        ];
+    } else {
+        menuItems = [
+            { path: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+            { path: '/admin/dashboard/emergencies', icon: <AlertCircle size={20} />, label: 'Emergencies' },
+            { path: '/admin/dashboard/users', icon: <Users size={20} />, label: 'Users' },
+            { path: '/admin/dashboard/meet-assign', icon: <Video size={20} />, label: 'Meet Assign' },
+            { path: '/admin/dashboard/analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
+        ];
+    }
 
     return (
         <aside className="fixed left-0 top-0 h-screen w-64 bg-primary text-white p-6 shadow-2xl z-50 transition-colors duration-300">
