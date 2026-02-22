@@ -1,5 +1,12 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+
+// Layouts
+import MainLayout from "./layouts/MainLayout";
+import DashboardLayout from "./components/layout/DashboardLayout";
+
+// Landing
+import LandingPage from "./pages/LandingPage";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -8,17 +15,20 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
-import LandingPage from "./pages/LandingPage";
-
 // Patient Pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import Profile from "./pages/patient/Profile";
 import Documents from "./pages/patient/Documents";
 import PatientNavbar from "./pages/patient/PatientNavbar";
 
-// Doctor Module
-import DashboardLayout from "./components/layout/DashboardLayout";
+// Doctor Pages
 import DashboardPage from "./pages/doctor/DashboardPage";
+
+// Admin / Monitoring Pages
+import Dashboard from "./pages/Dashboard";
+import ManageUsers from "./pages/ManageUsers";
+import EmergencyMonitoring from "./pages/EmergencyMonitoring";
+import Analytics from "./pages/Analytics";
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -26,7 +36,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           {/* Landing */}
           <Route path="/" element={<LandingPage />} />
@@ -43,7 +53,7 @@ export default function App() {
             <Route path="/patient/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/profile" element={<Profile />} />
             <Route path="/patient/documents" element={<Documents />} />
-            <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
+            <Route path="/patient/navbar" element={<PatientNavbar />} />
           </Route>
 
           {/* Doctor Dashboard */}
@@ -57,8 +67,16 @@ export default function App() {
               }
             />
           </Route>
+
+          {/* Admin / Monitoring Layout */}
+          <Route path="/admin" element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="users" element={<ManageUsers />} />
+            <Route path="emergencies" element={<EmergencyMonitoring />} />
+            <Route path="analytics" element={<Analytics />} />
+          </Route>
         </Routes>
-      </BrowserRouter>
+      </Router>
     </ThemeProvider>
   );
 }
