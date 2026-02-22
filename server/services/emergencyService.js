@@ -8,11 +8,92 @@ class EmergencyService {
     }
 
     async getAllEmergencies() {
-        return await EmergencyCase.find().populate('patient', 'fullName phone email').sort({ createdAt: -1 });
+        return await EmergencyCase.aggregate([
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'patient',
+                    foreignField: '_id',
+                    as: 'patientUser'
+                }
+            },
+            { $unwind: '$patientUser' },
+            {
+                $lookup: {
+                    from: 'patients',
+                    localField: 'patientUser._id',
+                    foreignField: 'userId',
+                    as: 'patientProfile'
+                }
+            },
+            {
+                $addFields: {
+                    patient: {
+                        _id: '$patientUser._id',
+                        email: '$patientUser.email',
+                        phone: '$patientUser.phone',
+                        fullName: {
+                            $ifNull: [
+                                { $arrayElemAt: ['$patientProfile.fullName', 0] },
+                                { $ifNull: ['$patientUser.fullName', 'Anonymous Patient'] }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    patientUser: 0,
+                    patientProfile: 0
+                }
+            },
+            { $sort: { createdAt: -1 } }
+        ]);
     }
 
     async getEmergencyById(id) {
-        return await EmergencyCase.findById(id).populate('patient', 'fullName phone email');
+        const emergencies = await EmergencyCase.aggregate([
+            { $match: { _id: new (require('mongoose').Types.ObjectId)(id) } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'patient',
+                    foreignField: '_id',
+                    as: 'patientUser'
+                }
+            },
+            { $unwind: '$patientUser' },
+            {
+                $lookup: {
+                    from: 'patients',
+                    localField: 'patientUser._id',
+                    foreignField: 'userId',
+                    as: 'patientProfile'
+                }
+            },
+            {
+                $addFields: {
+                    patient: {
+                        _id: '$patientUser._id',
+                        email: '$patientUser.email',
+                        phone: '$patientUser.phone',
+                        fullName: {
+                            $ifNull: [
+                                { $arrayElemAt: ['$patientProfile.fullName', 0] },
+                                { $ifNull: ['$patientUser.fullName', 'Anonymous Patient'] }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    patientUser: 0,
+                    patientProfile: 0
+                }
+            }
+        ]);
+        return emergencies.length > 0 ? emergencies[0] : null;
     }
 
     async updateStatus(id, { status, responderName }) {

@@ -19,7 +19,6 @@ const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
     query.role = role;
   }
 
-  // We use aggregation to join with Patient and Doctor details
   const pipeline = [
     { $match: query },
     {
@@ -59,9 +58,6 @@ const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
       $addFields: {
         displayName: {
           $ifNull: ["$profile.fullName", { $ifNull: ["$fullName", "No Name"] }]
-        },
-        avatarUrl: {
-          $ifNull: ["$profile.avatarUrl", ""]
         }
       }
     },
@@ -75,7 +71,6 @@ const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
     }
   ];
 
-  // Handle Search in Aggregation
   if (search) {
     pipeline.push({
       $match: {
@@ -90,8 +85,8 @@ const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // For total count we need a separate aggregation or dynamic skip/limit
-  const totalResults = await User.aggregate([...pipeline, { $count: "total" }]);
+  const countPipeline = [...pipeline, { $count: "total" }];
+  const totalResults = await User.aggregate(countPipeline);
   const total = totalResults.length > 0 ? totalResults[0].total : 0;
 
   pipeline.push({ $skip: skip });
@@ -101,7 +96,8 @@ const getAllUsers = async (page = 1, limit = 10, search = "", role = "all") => {
 
   const mappedUsers = users.map(u => ({
     ...u,
-    name: u.displayName // frontend compatibility
+    name: u.displayName === "No Name" ? (u.fullName || "No Name") : u.displayName,
+    avatarUrl: u.profile?.avatarUrl || u.avatarUrl || ""
   }));
 
   return {

@@ -360,43 +360,40 @@ const ManageUsers = () => {
             {showDetailModal && selectedUser && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setShowDetailModal(false)}></div>
-                    <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200 flex flex-col">
+                    <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
 
-                        {/* Modal Header/Banner */}
-                        <div className="relative h-28 bg-gradient-to-r from-teal-600 to-cyan-700 flex-shrink-0">
-                            <button onClick={() => setShowDetailModal(false)} className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all z-10">
+                        {/* Modal Header — avatar + identity, no overflow clipping */}
+                        <div className="flex-shrink-0 px-8 pt-8 pb-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-5">
+                            <div className="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden shadow-lg flex-shrink-0 border-2 border-slate-200 dark:border-slate-700">
+                                {selectedUser.avatarUrl ? (
+                                    <img src={selectedUser.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                        <UserIcon size={40} strokeWidth={1.5} />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate">{selectedUser.name || 'No Name'}</h3>
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest border ${selectedUser.role === 'admin' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/40 dark:text-rose-400 dark:border-rose-900/30' :
+                                        selectedUser.role === 'doctor' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-900/30' :
+                                            selectedUser.role === 'responder' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-400 dark:border-indigo-900/30' :
+                                                'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-900/40 dark:text-teal-400 dark:border-teal-900/30'
+                                        }`}>
+                                        {selectedUser.role}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${selectedUser.status === 'ACTIVE' ? 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
+                                        {selectedUser.status}
+                                    </span>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDetailModal(false)} className="self-start p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0">
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="px-8 pb-8 flex-1 overflow-y-auto custom-scrollbar">
-                            {/* Profile Identity */}
-                            <div className="relative -mt-12 mb-8 flex items-end gap-6 text-left">
-                                <div className="w-32 h-32 rounded-3xl border-[6px] border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 overflow-hidden shadow-xl flex-shrink-0">
-                                    {selectedUser.avatarUrl ? (
-                                        <img src={selectedUser.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-400">
-                                            <UserIcon size={48} strokeWidth={1.5} />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="pb-2">
-                                    <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{selectedUser.name || 'No Name'}</h3>
-                                    <div className="flex items-center gap-2 mt-1.5 text-left">
-                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest border ${selectedUser.role === 'admin' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/40 dark:text-rose-400 dark:border-rose-900/30' :
-                                            selectedUser.role === 'doctor' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-900/30' :
-                                                selectedUser.role === 'responder' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-400 dark:border-indigo-900/30' :
-                                                    'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-900/40 dark:text-teal-400 dark:border-teal-900/30'
-                                            }`}>
-                                            {selectedUser.role}
-                                        </span>
-                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${selectedUser.status === 'ACTIVE' ? 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
-                                            {selectedUser.status}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="px-8 pb-8 flex-1 overflow-y-auto custom-scrollbar pt-6">
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4 text-left">
                                 <div className="space-y-8">

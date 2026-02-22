@@ -2,8 +2,17 @@ const User = require('../models/User');
 const EmergencyCase = require('../models/EmergencyCase');
 
 class AdminService {
-    async getAllUsers() {
-        return await User.aggregate([
+    async getAllUsers({ page = 1, limit = 10, search = '', role = 'all' } = {}) {
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const limitNum = parseInt(limit);
+
+        const match = {};
+        if (role && role !== 'all') {
+            match.role = role;
+        }
+
+        const pipeline = [
+            { $match: match },
             {
                 $lookup: {
                     from: 'patients',
@@ -40,18 +49,48 @@ class AdminService {
             {
                 $addFields: {
                     name: { $ifNull: ['$profile.fullName', '$fullName'] },
-                    avatarUrl: { $ifNull: ['$profile.avatarUrl', null] },
-                    phone: { $ifNull: ['$phone', '$profile.phone'] }
+                    avatarUrl: { $ifNull: ['$profile.avatarUrl', null] }
                 }
             },
             {
                 $project: {
                     patientProfile: 0,
-                    doctorProfile: 0
+                    doctorProfile: 0,
+                    passwordHash: 0
                 }
-            },
-            { $sort: { createdAt: -1 } }
+            }
+        ];
+
+        if (search) {
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { name: { $regex: search, $options: 'i' } },
+                        { email: { $regex: search, $options: 'i' } },
+                        { phone: { $regex: search, $options: 'i' } }
+                    ]
+                }
+            });
+        }
+
+        const results = await User.aggregate([
+            ...pipeline,
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }],
+                    data: [{ $sort: { createdAt: -1 } }, { $skip: skip }, { $limit: limitNum }]
+                }
+            }
         ]);
+
+        const total = results[0]?.metadata[0]?.total || 0;
+        const users = results[0]?.data || [];
+
+        return {
+            users,
+            total,
+            pages: Math.ceil(total / limitNum)
+        };
     }
 
     async toggleUserStatus(id) {
