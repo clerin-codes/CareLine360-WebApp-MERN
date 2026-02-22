@@ -66,13 +66,13 @@ const getMyPatientProfile = async (userId) => {
   });
 
   if (!patient) {
-    const user = await User.findById(userId).select("name email");
+    const user = await User.findById(userId).select("email");
     if (!user) return null;
 
     patient = await Patient.create({
       userId,
       patientId: makePatientId(),
-      fullName: user.name || "Patient",
+      fullName: "Patient",
       isDeleted: false,
     });
   }

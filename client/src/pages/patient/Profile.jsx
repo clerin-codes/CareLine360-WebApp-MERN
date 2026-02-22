@@ -39,7 +39,6 @@ export default function Profile() {
 
   // ✅ Avatar (frontend-only)
   const [avatar, setAvatar] = useState(() => localStorage.getItem("patientAvatar") || "");
-  const [avatarFile, setAvatarFile] = useState(null);
 
   // identity from login (localStorage)
   const [identity, setIdentity] = useState(() => getLoginIdentity());

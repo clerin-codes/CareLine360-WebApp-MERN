@@ -14,7 +14,6 @@ import LandingPage from "./pages/LandingPage";
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import Profile from "./pages/patient/Profile";
 import Documents from "./pages/patient/Documents";
-import PatientNavbar from "./pages/patient/PatientNavbar";
 
 // Doctor Module
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -43,7 +42,6 @@ export default function App() {
             <Route path="/patient/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/profile" element={<Profile />} />
             <Route path="/patient/documents" element={<Documents />} />
-            <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
           </Route>
 
           {/* Doctor Dashboard */}

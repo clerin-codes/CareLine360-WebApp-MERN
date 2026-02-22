@@ -9,9 +9,6 @@ const uploadMyDocument = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // ✅ DEBUG (keep for now)
-    console.log("UPLOAD req.file:", req.file);
-
     if (!req.file?.path) {
       return res.status(400).json({ message: "No document uploaded (req.file.path missing)" });
     }
@@ -116,8 +113,7 @@ const deleteMyDocumentPermanent = async (req, res) => {
       doc.resourceType === "video" ? "video" :
       "raw";
 
-    const result = await cloudinary.uploader.destroy(doc.publicId, { resource_type: rtype });
-    console.log("Cloudinary destroy result:", result);
+    await cloudinary.uploader.destroy(doc.publicId, { resource_type: rtype });
 
     // mark deleted in DB
     doc.isDeleted = true;
@@ -127,7 +123,7 @@ const deleteMyDocumentPermanent = async (req, res) => {
     return res.json({ message: "Document deleted permanently" });
   } catch (e) {
     console.error("PERMANENT DELETE ERROR:", e);
-    return res.status(500).json({ message: e.message || "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
