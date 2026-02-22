@@ -76,9 +76,21 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="users" element={<ManageUsers />} />
               <Route path="meet-assign" element={<MeetAssign />} />
-              <Route path="emergencies" element={<EmergencyMonitoring />} />
               <Route path="analytics" element={<Analytics />} />
+            </Route>
+          </Route>
 
+          {/* Emergencies tab for admin and responder */}
+          <Route element={<ProtectedRoute allowedRoles={["admin", "responder"]} />}>
+            <Route path="/admin/dashboard/emergencies" element={<MainLayout />}>
+              <Route index element={<EmergencyMonitoring />} />
+            </Route>
+          </Route>
+
+          {/* Emergencies tab for admin and responder */}
+          <Route element={<ProtectedRoute allowedRoles={["admin", "responder"]} />}>
+            <Route path="/admin/dashboard/emergencies" element={<MainLayout />}>
+              <Route index element={<EmergencyMonitoring />} />
             </Route>
           </Route>
         </Routes>
