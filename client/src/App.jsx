@@ -1,5 +1,8 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+import { connectSocket, disconnectSocket } from "./socket/socketClient";
+import { hasToken } from "./auth/authStorage";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -7,7 +10,6 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-
 import LandingPage from "./pages/LandingPage";
 
 // Patient Pages
@@ -16,29 +18,45 @@ import Profile from "./pages/patient/Profile";
 import Documents from "./pages/patient/Documents";
 import PatientNavbar from "./pages/patient/PatientNavbar";
 
-// Doctor Module
+// Doctor Pages
 import DashboardLayout from "./components/layout/DashboardLayout";
 import DashboardPage from "./pages/doctor/DashboardPage";
+import DoctorProfileSetup from "./pages/doctor/DoctorProfileSetup";
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
+  // Connect Socket.io when user is already logged in (page refresh)
+  useEffect(() => {
+    if (hasToken()) {
+      connectSocket();
+    }
+
+    // Handle storage events (logout from another tab)
+    const onStorage = (e) => {
+      if (e.key === "accessToken") {
+        if (!e.newValue) disconnectSocket();
+        else connectSocket();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   return (
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
-          {/* Landing */}
+          {/* Public */}
           <Route path="/" element={<LandingPage />} />
-
-          {/* Auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Patient Protected Routes */}
+          {/* Patient */}
           <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
             <Route path="/patient/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/profile" element={<Profile />} />
@@ -46,8 +64,9 @@ export default function App() {
             <Route path="/patient/PatientNavbar" element={<PatientNavbar />} />
           </Route>
 
-          {/* Doctor Dashboard */}
+          {/* Doctor */}
           <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
+            <Route path="/doctor/setup" element={<DoctorProfileSetup />} />
             <Route
               path="/doctor/dashboard"
               element={
