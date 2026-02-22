@@ -1,7 +1,15 @@
 const express = require("express");
 const { body } = require("express-validator");
 const { authMiddleware, roleMiddleware } = require("../middleware/auth");
-const { getPendingDoctors, patchUserStatus, postCreateResponder } = require("../controllers/adminController");
+const {
+  getPendingDoctors,
+  patchUserStatus,
+  postCreateUser,
+  getAllUsers,
+  toggleUserStatus,
+  deleteUser,
+  getStats
+} = require("../controllers/adminController");
 
 const router = express.Router();
 
@@ -9,6 +17,10 @@ const router = express.Router();
 router.use(authMiddleware, roleMiddleware(["admin"]));
 
 router.get("/doctors/pending", getPendingDoctors);
+router.get("/users", getAllUsers);
+router.patch("/users/:id/toggle-status", toggleUserStatus);
+router.delete("/users/:id", deleteUser);
+router.get("/stats", getStats);
 
 router.patch(
   "/users/:id/status",
@@ -17,15 +29,17 @@ router.patch(
 );
 
 router.post(
-  "/responders",
+  "/users",
   [
     body("password").isLength({ min: 8 }),
     body().custom((value) => {
       if (!value.email && !value.phone) throw new Error("Email or phone is required");
       return true;
     }),
+    body("fullName").notEmpty().withMessage("Full name is required"),
+    body("role").isIn(["patient", "doctor", "responder", "admin"]).withMessage("Invalid role")
   ],
-  postCreateResponder
+  postCreateUser
 );
 
 module.exports = router;
