@@ -6,8 +6,11 @@ const {
   getAllUsers: serviceGetAllUsers,
   toggleUserStatus: serviceToggleUserStatus,
   deleteUser: serviceDeleteUser,
-  getStats: serviceGetStats
+  getStats: serviceGetStats,
+  getAppointments: serviceGetAppointments,
+  createMeetingLink: serviceCreateMeetingLink
 } = require("../services/adminService");
+
 
 const getPendingDoctors = async (req, res, next) => {
   try {
@@ -83,6 +86,26 @@ const postCreateUser = async (req, res, next) => {
   }
 };
 
+const getAppointments = async (req, res, next) => {
+  try {
+    const result = await serviceGetAppointments();
+    return res.status(result.status).json({ success: true, data: result.data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createMeetingLink = async (req, res, next) => {
+  try {
+    const appointmentId = req.params.id;
+    const result = await serviceCreateMeetingLink(appointmentId);
+    return res.status(result.status).json({ success: true, data: result.data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   getPendingDoctors,
   patchUserStatus,
@@ -90,5 +113,9 @@ module.exports = {
   getAllUsers,
   toggleUserStatus,
   deleteUser,
-  getStats
+  getStats,
+  getAppointments
+  ,
+  createMeetingLink
 };
+

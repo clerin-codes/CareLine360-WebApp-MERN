@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, AlertCircle, BarChart3, Shield, Sun, Moon, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, AlertCircle, BarChart3, Shield, Sun, Moon, LogOut, Video } from 'lucide-react';
+
 
 import { getFullName, clearAuth } from '../auth/authStorage';
 
@@ -26,7 +27,9 @@ const Sidebar = () => {
         { path: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
         { path: '/admin/dashboard/emergencies', icon: <AlertCircle size={20} />, label: 'Emergencies' },
         { path: '/admin/dashboard/users', icon: <Users size={20} />, label: 'Users' },
+        { path: '/admin/dashboard/meet-assign', icon: <Video size={20} />, label: 'Meet Assign' },
         { path: '/admin/dashboard/analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
+
     ];
 
     return (
