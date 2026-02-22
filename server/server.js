@@ -30,7 +30,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/documents", documentRoutes);
 
-
 // Test Route
 app.get("/", (req, res) => {
   res.send("API is running...");
@@ -39,9 +38,6 @@ app.get("/", (req, res) => {
 // Example Route Import
 // const userRoutes = require("./routes/userRoutes");
 // app.use("/api/users", userRoutes);
-
-
-
 
 // ✅ Multer / Cloudinary specific errors
 app.use((err, req, res, next) => {
@@ -52,7 +48,9 @@ app.use((err, req, res, next) => {
   }
 
   if (err?.message?.includes("Only PDF, images, DOC, DOCX allowed")) {
-    return res.status(400).json({ message: "Only PDF, images, DOC, DOCX allowed" });
+    return res
+      .status(400)
+      .json({ message: "Only PDF, images, DOC, DOCX allowed" });
   }
 
   if (err?.code === "LIMIT_FILE_SIZE") {
@@ -62,14 +60,13 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ message: err.message || "Server error" });
 });
 
-
 // Global error fallback
 // app.use((err, req, res, next) => {
 //   console.error(err);
 //   res.status(500).json({ message: "Server error" });
 // });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
