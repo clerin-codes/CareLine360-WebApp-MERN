@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import api from '../api/axios';
 
 // Fix Leaflet marker icon issue
@@ -15,45 +15,62 @@ L.Icon.Default.mergeOptions({
     iconRetinaUrl: markerIcon2x,
     shadowUrl: markerShadow,
 });
-// Add CSS to fix popup styling conflicts
+// Add CSS to fix popup styling conflicts and make it look premium
 const popupStyles = `
   .leaflet-popup-pane {
-    z-index: 1000 !important;
+    z-index: 9999 !important;
   }
   .leaflet-popup {
-    z-index: 1000 !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
+    z-index: 9999 !important;
+    background-color: transparent !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
   }
   .leaflet-popup-content-wrapper {
-    padding: 8px !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
   }
   .leaflet-popup-content {
-    margin: 8px 12px !important;
-    font-family: system-ui, -apple-system, sans-serif !important;
-    font-size: 14px !important;
-    color: #374151 !important;
+    margin: 0 !important;
+    width: 240px !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 13px !important;
+    color: #1e293b !important;
   }
   .leaflet-popup-tip {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: #ffffff !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
   }
   .leaflet-container a.leaflet-popup-close-button {
-    color: #64748b !important;
-    font-size: 16px !important;
-    padding: 4px 8px !important;
+    top: 10px !important;
+    right: 10px !important;
+    color: #ffffff !important;
+    background: rgba(0,0,0,0.2) !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
     text-decoration: none !important;
-    font-weight: bold !important;
+    transition: all 0.2s ease !important;
   }
   .leaflet-container a.leaflet-popup-close-button:hover {
-    color: #374151 !important;
-    background: rgba(0, 0, 0, 0.1) !important;
-    border-radius: 4px !important;
+    background: rgba(0,0,0,0.4) !important;
+    color: #ffffff !important;
   }
 `;
+
+// Helper for structured data rows
+const DataRow = ({ label, value, color = "#64748b" }) => (
+    <div style={{ display: 'flex', gap: '8px', marginBottom: '4px', alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '10px', fontWeight: '800', color: color, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: '60px', paddingTop: '2px' }}>{label}</span>
+        <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b', flex: 1, lineHeight: '1.4' }}>{value || 'Not provided'}</span>
+    </div>
+);
 
 // Inject styles
 if (typeof document !== 'undefined') {
@@ -101,6 +118,18 @@ function ChangeView({ center, zoom }) {
 const EmergencyMap = ({ emergency }) => {
     const [nearestHospital, setNearestHospital] = useState(null);
     const [allHospitals, setAllHospitals] = useState([]);
+    const markerRef = useRef(null);
+
+    // Auto-open the emergency popup when marker mounts
+    const setMarkerRef = useCallback((node) => {
+        if (node) {
+            markerRef.current = node;
+            // Small delay to ensure popup is ready
+            setTimeout(() => {
+                node.openPopup();
+            }, 300);
+        }
+    }, []);
 
     useEffect(() => {
         fetchAllHospitals();
@@ -134,7 +163,7 @@ const EmergencyMap = ({ emergency }) => {
     const center = [emergency.latitude, emergency.longitude];
 
     return (
-        <div className="h-full w-full overflow-hidden relative group">
+        <div className="h-full w-full relative group">
             <MapContainer
                 center={center}
                 zoom={13}
@@ -148,25 +177,32 @@ const EmergencyMap = ({ emergency }) => {
                 />
                 <ChangeView center={center} zoom={13} />
 
-                <Marker position={center} icon={redIcon}>
+                <Marker position={center} icon={redIcon} ref={setMarkerRef}>
                     <Popup closeButton={false} closeOnClick={false} autoClose={false} keepInView={true}>
-                        <div style={{ fontFamily: 'system-ui, sans-serif', minWidth: '200px' }}>
-                            <p style={{ fontWeight: 'bold', color: '#dc2626', margin: '0 0 4px 0', fontSize: '14px' }}>🚨 EMERGENCY LOCATION</p>
-                            <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                Patient: {emergency.patient?.fullName || 'Anonymous Patient'}
-                            </p>
-                            <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                Contact: {emergency.patient?.contact || 'N/A'}
-                            </p>
-                            <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                Address: {emergency.patient?.address || 'N/A'}
-                            </p>
-                            <p style={{ fontSize: '10px', color: '#6b7280', margin: '2px 0 0 0' }}>
-                                {emergency.description ? `"${emergency.description}"` : 'Emergency situation'}
-                            </p>
-                            <p style={{ fontSize: '10px', color: '#6b7280', margin: '2px 0 0 0' }}>
-                                Reported at: {new Date(emergency.timestamp).toLocaleString() || 'N/A'}
-                            </p>
+                        <div style={{ overflow: 'hidden' }}>
+                            {/* Header */}
+                            <div style={{ background: '#ef4444', padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                <p style={{ fontWeight: '900', color: '#ffffff', margin: 0, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>🚨 EMERGENCY LOCATION</p>
+                            </div>
+
+                            {/* Body */}
+                            <div style={{ padding: '16px' }}>
+                                <DataRow label="Patient" value={emergency.patient?.fullName} color="#ef4444" />
+                                <DataRow label="Contact" value={emergency.patient?.phone || emergency.patient?.contact} />
+                                <DataRow label="Address" value={emergency.patient?.address} />
+
+                                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                                    <DataRow label="Status" value={emergency.status} />
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b', fontStyle: 'italic', lineHeight: '1.5' }}>
+                                        {emergency.description ? `"${emergency.description}"` : 'No situation details provided.'}
+                                    </p>
+                                </div>
+
+                                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.6 }}>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', fontFamily: 'monospace' }}>{emergency.latitude?.toFixed(5)}, {emergency.longitude?.toFixed(5)}</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '800' }}>{new Date(emergency.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                            </div>
                         </div>
                     </Popup>
                 </Marker>
@@ -174,10 +210,17 @@ const EmergencyMap = ({ emergency }) => {
                 {allHospitals.map(h => (
                     <Marker key={h._id} position={[h.lat, h.lng]} icon={blueIcon}>
                         <Popup>
-                            <div style={{ fontFamily: 'system-ui, sans-serif' }}>
-                                <p style={{ fontWeight: 'bold', color: '#2563eb', margin: '0 0 4px 0', fontSize: '12px' }}>🏥 {h.name}</p>
-                                <p style={{ fontSize: '10px', margin: '0', color: '#374151' }}>{h.address}</p>
-                                <p style={{ fontSize: '10px', margin: '0', color: '#374151' }}>{h.contact}</p>
+                            <div style={{ overflow: 'hidden' }}>
+                                {/* Header */}
+                                <div style={{ background: '#3b82f6', padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <p style={{ fontWeight: '900', color: '#ffffff', margin: 0, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>🏥 {h.name}</p>
+                                </div>
+
+                                {/* Body */}
+                                <div style={{ padding: '16px' }}>
+                                    <DataRow label="Address" value={h.address} color="#3b82f6" />
+                                    <DataRow label="Contact" value={h.contact} />
+                                </div>
                             </div>
                         </Popup>
                     </Marker>
@@ -186,20 +229,23 @@ const EmergencyMap = ({ emergency }) => {
                 {nearestHospital && (
                     <Marker position={[nearestHospital.lat, nearestHospital.lng]} icon={greenIcon}>
                         <Popup closeButton={false} closeOnClick={false} autoClose={false} keepInView={true}>
-                            <div style={{ fontFamily: 'system-ui, sans-serif', minWidth: '200px' }}>
-                                <p style={{ fontWeight: 'bold', color: '#059669', margin: '0 0 4px 0', fontSize: '14px' }}>🏥 NEAREST HOSPITAL</p>
-                                <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                    Name: {nearestHospital.name}
-                                </p>
-                                <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                    Address: {nearestHospital.address || 'N/A'}
-                                </p>
-                                <p style={{ fontSize: '12px', fontWeight: '500', margin: '0', color: '#374151' }}>
-                                    Contact: {nearestHospital.contact || 'N/A'}
-                                </p>
-                                <p style={{ fontSize: '10px', color: '#6b7280', margin: '2px 0 0 0' }}>
-                                    📍 {nearestHospital.distance} km away
-                                </p>
+                            <div style={{ overflow: 'hidden' }}>
+                                {/* Header */}
+                                <div style={{ background: '#10b981', padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <p style={{ fontWeight: '900', color: '#ffffff', margin: 0, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>🏥 NEAREST HOSPITAL</p>
+                                </div>
+
+                                {/* Body */}
+                                <div style={{ padding: '16px' }}>
+                                    <DataRow label="Name" value={nearestHospital.name} color="#10b981" />
+                                    <DataRow label="Address" value={nearestHospital.address} />
+                                    <DataRow label="Contact" value={nearestHospital.contact} />
+
+                                    <div style={{ marginTop: '12px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #dcfce7', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '14px' }}>📍</span>
+                                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>{nearestHospital.distance} km away</span>
+                                    </div>
+                                </div>
                             </div>
                         </Popup>
                     </Marker>

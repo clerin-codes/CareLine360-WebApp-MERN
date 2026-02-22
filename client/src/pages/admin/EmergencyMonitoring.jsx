@@ -8,9 +8,9 @@ import EmergencyMap from '../../components/EmergencyMap';
 const safeFormatDate = (dateStr, formatStr) => {
     try {
         const d = new Date(dateStr);
-        return isValid(d) ? format(d, formatStr) : 'N/A';
+        return isValid(d) ? format(d, formatStr) : '—';
     } catch (e) {
-        return 'N/A';
+        return '—';
     }
 };
 
@@ -171,7 +171,7 @@ const EmergencyMonitoring = () => {
                                         onClick={() => openModal(e)}
                                     >
                                         <td className="py-5 px-6">
-                                            <div className="font-bold text-slate-900 dark:text-white text-base">{e.patient?.fullName || 'Anonymous Patient'}</div>
+                                            <div className="font-bold text-slate-900 dark:text-white text-base">{e.patient?.fullName || 'Identity Pending'}</div>
                                             <div className="text-xs text-slate-500 dark:text-slate-500 font-medium max-w-[280px] truncate italic">"{e.description}"</div>
                                         </td>
                                         <td className="py-5 px-6">
@@ -232,16 +232,30 @@ const EmergencyMonitoring = () => {
                         ) : (
                             <ul className="space-y-3">
                                 {hospitals.map(h => (
-                                    <li key={h._id} className="p-3 border rounded-lg flex justify-between items-start">
-                                        <div>
-                                            <div className="font-bold">{h.name}</div>
-                                            <div className="text-xs text-slate-500">{h.address}</div>
-                                            <div className="text-xs text-slate-500">{h.contact}</div>
-                                            <div className="text-xs text-mono text-slate-500 mt-1">{h.lat.toFixed ? h.lat.toFixed(6) : h.lat}, {h.lng.toFixed ? h.lng.toFixed(6) : h.lng}</div>
+                                    <li key={h._id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold text-lg">
+                                                🏥
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-900 dark:text-white leading-tight">{h.name}</div>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500">
+                                                        <MapPin size={10} className="text-teal-500" /> {h.address || 'No Address Listed'}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500">
+                                                        <Phone size={10} className="text-teal-500" /> {h.contact || 'No Contact Listed'}
+                                                    </div>
+                                                </div>
+                                                <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-tighter">Node: {h.lat.toFixed ? h.lat.toFixed(5) : h.lat}, {h.lng.toFixed ? h.lng.toFixed(5) : h.lng}</div>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col items-end gap-2">
-                                            <button onClick={() => handleRemoveHospital(h._id)} className="px-3 py-1 rounded bg-rose-500 text-white text-sm">Remove</button>
-                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveHospital(h._id)}
+                                            className="px-4 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/30 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                                        >
+                                            Decommission
+                                        </button>
                                     </li>
                                 ))}
                             </ul>
@@ -253,8 +267,10 @@ const EmergencyMonitoring = () => {
             {/* Rescue Detail Modal */}
             {isModalOpen && selectedEmergency && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}></div>
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+                    {/* Overlay: only this should be faded/blurred */}
+                    <div className="absolute inset-0 bg-slate-950/70 animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}></div>
+                    {/* Modal content: remove bg opacity/blur classes, ensure full opacity */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800 z-10">
 
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 text-left shrink-0">
                             <div className="flex items-center gap-4">
@@ -281,10 +297,10 @@ const EmergencyMonitoring = () => {
                                         <div className="flex items-start gap-4">
                                             <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-teal-600 shadow-sm"><User size={20} /></div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Subject Identity</p>
-                                                <p className="font-bold text-lg text-slate-900 dark:text-white">{selectedEmergency.patient?.fullName || 'Unknown Object'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Subject Records</p>
+                                                <p className="font-bold text-lg text-slate-900 dark:text-white">{selectedEmergency.patient?.fullName || 'Identity Pending'}</p>
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-1">
-                                                    <Phone size={12} className="text-teal-500" /> {selectedEmergency.patient?.phone || 'No Secure Line'}
+                                                    <Phone size={12} className="text-teal-500" /> {selectedEmergency.patient?.phone || 'No Contact Listed'}
                                                 </div>
                                             </div>
                                         </div>
@@ -329,7 +345,7 @@ const EmergencyMonitoring = () => {
                                         </h4>
                                         <span className="text-[10px] font-mono font-bold text-slate-400 tracking-tighter">{selectedEmergency.latitude?.toFixed(6)}, {selectedEmergency.longitude?.toFixed(6)}</span>
                                     </div>
-                                    <div className="flex-1 min-h-[350px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative">
+                                    <div className="flex-1 min-h-[350px] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg relative overflow-visible">
                                         <EmergencyMap emergency={selectedEmergency} />
                                     </div>
                                 </div>
