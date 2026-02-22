@@ -18,7 +18,7 @@ import PatientNavbar from "./pages/patient/PatientNavbar";
 
 // Doctor Module
 import DashboardLayout from "./components/layout/DashboardLayout";
-import DashboardPage from "./pages/DashboardPage";
+import DashboardPage from "./pages/doctor/DashboardPage";
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
