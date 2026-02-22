@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Activity } from 'lucide-react';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';

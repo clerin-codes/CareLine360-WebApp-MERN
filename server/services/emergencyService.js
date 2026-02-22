@@ -1,6 +1,7 @@
 const EmergencyCase = require('../models/EmergencyCase');
 const hospitals = require('../utils/hospitals');
 const { calculateDistance } = require('../utils/distance');
+const mongoose = require('mongoose');
 
 class EmergencyService {
     async createEmergency(data) {
@@ -11,40 +12,58 @@ class EmergencyService {
         return await EmergencyCase.aggregate([
             {
                 $lookup: {
+                    from: 'patients',
+                    let: { patientId: '$patient' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        { $eq: ['$_id', '$$patientId'] },
+                                        { $eq: ['$userId', '$$patientId'] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'patientDetail'
+                }
+            },
+            {
+                $lookup: {
                     from: 'users',
                     localField: 'patient',
                     foreignField: '_id',
-                    as: 'patientUser'
+                    as: 'userDetail'
                 }
             },
-            { $unwind: '$patientUser' },
             {
-                $lookup: {
-                    from: 'patients',
-                    localField: 'patientUser._id',
-                    foreignField: 'userId',
-                    as: 'patientProfile'
+                $addFields: {
+                    resolvedPatientProfile: { $arrayElemAt: ['$patientDetail', 0] },
+                    resolvedUser: { $arrayElemAt: ['$userDetail', 0] }
                 }
             },
             {
                 $addFields: {
                     patient: {
-                        _id: '$patientUser._id',
-                        email: '$patientUser.email',
-                        phone: '$patientUser.phone',
+                        _id: '$patient',
                         fullName: {
                             $ifNull: [
-                                { $arrayElemAt: ['$patientProfile.fullName', 0] },
-                                { $ifNull: ['$patientUser.fullName', 'Anonymous Patient'] }
+                                '$resolvedPatientProfile.fullName',
+                                { $ifNull: ['$resolvedUser.fullName', 'Anonymous Patient'] }
                             ]
-                        }
+                        },
+                        email: '$resolvedUser.email',
+                        phone: { $ifNull: ['$resolvedPatientProfile.phone', '$resolvedUser.phone'] }
                     }
                 }
             },
             {
                 $project: {
-                    patientUser: 0,
-                    patientProfile: 0
+                    patientDetail: 0,
+                    userDetail: 0,
+                    resolvedPatientProfile: 0,
+                    resolvedUser: 0
                 }
             },
             { $sort: { createdAt: -1 } }
@@ -53,43 +72,61 @@ class EmergencyService {
 
     async getEmergencyById(id) {
         const emergencies = await EmergencyCase.aggregate([
-            { $match: { _id: new (require('mongoose').Types.ObjectId)(id) } },
+            { $match: { _id: new mongoose.Types.ObjectId(id) } },
+            {
+                $lookup: {
+                    from: 'patients',
+                    let: { patientId: '$patient' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        { $eq: ['$_id', '$$patientId'] },
+                                        { $eq: ['$userId', '$$patientId'] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'patientDetail'
+                }
+            },
             {
                 $lookup: {
                     from: 'users',
                     localField: 'patient',
                     foreignField: '_id',
-                    as: 'patientUser'
+                    as: 'userDetail'
                 }
             },
-            { $unwind: '$patientUser' },
             {
-                $lookup: {
-                    from: 'patients',
-                    localField: 'patientUser._id',
-                    foreignField: 'userId',
-                    as: 'patientProfile'
+                $addFields: {
+                    resolvedPatientProfile: { $arrayElemAt: ['$patientDetail', 0] },
+                    resolvedUser: { $arrayElemAt: ['$userDetail', 0] }
                 }
             },
             {
                 $addFields: {
                     patient: {
-                        _id: '$patientUser._id',
-                        email: '$patientUser.email',
-                        phone: '$patientUser.phone',
+                        _id: '$patient',
                         fullName: {
                             $ifNull: [
-                                { $arrayElemAt: ['$patientProfile.fullName', 0] },
-                                { $ifNull: ['$patientUser.fullName', 'Anonymous Patient'] }
+                                '$resolvedPatientProfile.fullName',
+                                { $ifNull: ['$resolvedUser.fullName', 'Anonymous Patient'] }
                             ]
-                        }
+                        },
+                        email: '$resolvedUser.email',
+                        phone: { $ifNull: ['$resolvedPatientProfile.phone', '$resolvedUser.phone'] }
                     }
                 }
             },
             {
                 $project: {
-                    patientUser: 0,
-                    patientProfile: 0
+                    patientDetail: 0,
+                    userDetail: 0,
+                    resolvedPatientProfile: 0,
+                    resolvedUser: 0
                 }
             }
         ]);
@@ -125,11 +162,27 @@ class EmergencyService {
         let nearest = null;
         let minDistance = Infinity;
 
-        hospitals.forEach((hospital) => {
+        // Try to get hospitals from DB first
+        const Hospital = require('../models/Hospital');
+        let hospitalList = await Hospital.find({ isActive: true });
+
+        // If no hospitals in DB, fallback to static list
+        if (hospitalList.length === 0) {
+            hospitalList = hospitals;
+        }
+
+        hospitalList.forEach((hospital) => {
             const dist = calculateDistance(latitude, longitude, hospital.lat, hospital.lng);
             if (dist < minDistance) {
                 minDistance = dist;
-                nearest = { ...hospital, distance: parseFloat(dist.toFixed(2)) };
+                nearest = {
+                    name: hospital.name,
+                    lat: hospital.lat,
+                    lng: hospital.lng,
+                    address: hospital.address,
+                    contact: hospital.contact,
+                    distance: parseFloat(dist.toFixed(2))
+                };
             }
         });
 
