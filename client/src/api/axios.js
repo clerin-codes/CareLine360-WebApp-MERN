@@ -2,8 +2,9 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_URL;
 
-console.log("API Base URL:", import.meta.env.VITE_API_URL);
-
+if (import.meta.env.DEV) {
+  console.log("API Base URL:", import.meta.env.VITE_API_URL);
+}
 
 export const api = axios.create({ baseURL });
 
@@ -25,11 +26,25 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem("refreshToken");
       if (!refreshToken) return Promise.reject(err);
 
-      const refreshRes = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
-      localStorage.setItem("accessToken", refreshRes.data.accessToken);
+      try {
+        const refreshRes = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+        localStorage.setItem("accessToken", refreshRes.data.accessToken);
 
-      original.headers.Authorization = `Bearer ${refreshRes.data.accessToken}`;
-      return api(original);
+        if (!original.headers) {
+          original.headers = {};
+        }
+        original.headers.Authorization = `Bearer ${refreshRes.data.accessToken}`;
+        return api(original);
+      } catch (refreshError) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+
+        return Promise.reject(refreshError);
+      }
     }
     return Promise.reject(err);
   }

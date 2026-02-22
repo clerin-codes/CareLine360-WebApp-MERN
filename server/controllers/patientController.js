@@ -1,5 +1,6 @@
 const Patient = require("../models/Patient");
 const User = require("../models/User");
+const Document = require("../models/Document");
 const { calcPatientProfileStrength } = require("../services/profileStrength");
 
 const getMyProfile = async (req, res) => {
@@ -12,8 +13,7 @@ const getMyProfile = async (req, res) => {
     const user = await User.findById(userId).select("email isVerified role");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ✅ Document count (for now no doc module => 0)
-    const docsCount = 0;
+    const docsCount = await Document.countDocuments({ userId, isDeleted: false });
 
     const profileStrength = calcPatientProfileStrength({ patient, docsCount });
 
@@ -178,16 +178,16 @@ const updateMyProfile = async (req, res) => {
 
     // Nested address
     if (req.body.address) {
-      update["address.district"] = req.body.address.district;
-      update["address.city"] = req.body.address.city;
-      update["address.line1"] = req.body.address.line1;
+      for (const field of ["district", "city", "line1"]) {
+        if (req.body.address[field] !== undefined) update[`address.${field}`] = req.body.address[field];
+      }
     }
 
     // Nested emergency contact
     if (req.body.emergencyContact) {
-      update["emergencyContact.name"] = req.body.emergencyContact.name;
-      update["emergencyContact.phone"] = req.body.emergencyContact.phone;
-      update["emergencyContact.relationship"] = req.body.emergencyContact.relationship;
+      for (const field of ["name", "phone", "relationship"]) {
+        if (req.body.emergencyContact[field] !== undefined) update[`emergencyContact.${field}`] = req.body.emergencyContact[field];
+      }
     }
 
     // Medical
@@ -219,9 +219,6 @@ const updateMyProfile = async (req, res) => {
 
 const uploadAvatar = async (req, res) => {
   try {
-    console.log("AVATAR upload hit ✅");
-    console.log("req.file =", req.file); // ✅ add this
-
     const userId = req.user.userId;
 
     if (!req.file?.path) {
@@ -230,7 +227,6 @@ const uploadAvatar = async (req, res) => {
 
     // multer-storage-cloudinary gives secure URL in req.file.path
     const avatarUrl = req.file.path;
-    console.log("avatarUrl =", avatarUrl); // ✅ add this
 
     const patient = await Patient.findOneAndUpdate(
       { userId , $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }], },
