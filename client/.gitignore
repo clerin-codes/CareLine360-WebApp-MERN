@@ -25,7 +25,13 @@ dist-ssr
 
 
 .env
+<<<<<<< HEAD
 package-lock.json
 yarn.lock
 .package-lock.json
 .pnpm-lock.yaml
+=======
+
+#package-lock.json
+.package-lock.json
+>>>>>>> 9d646d66d3f8a87ddda31db2e788d6588b7bfcd9
