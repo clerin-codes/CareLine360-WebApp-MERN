@@ -1,7 +1,6 @@
 require("dotenv").config();
 
 const express = require("express");
-// const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
@@ -10,9 +9,6 @@ const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const documentRoutes = require("./routes/documentRoutes");
-
-// Load environment variables
-// dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -35,11 +31,7 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-// Example Route Import
-// const userRoutes = require("./routes/userRoutes");
-// app.use("/api/users", userRoutes);
-
-// ✅ Multer / Cloudinary specific errors
+// Multer / Cloudinary specific errors
 app.use((err, req, res, next) => {
   console.log("UPLOAD ERROR:", err);
 
@@ -60,14 +52,14 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ message: err.message || "Server error" });
 });
 
-// Global error fallback
-// app.use((err, req, res, next) => {
-//   console.error(err);
-//   res.status(500).json({ message: "Server error" });
-// });
+const PORT = process.env.PORT || 5000;
 
-const PORT = process.env.PORT;
+const server = app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (err) => {
+  console.log(`Error: ${err.message}`);
+  server.close(() => process.exit(1));
 });
