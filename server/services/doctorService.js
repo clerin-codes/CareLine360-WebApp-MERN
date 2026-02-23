@@ -53,6 +53,20 @@ const getDoctorProfile = async ({ userId }) => {
   return { status: 200, data: { doctor } };
 };
 
+// Soft-delete: marks doctor profile as deleted and deactivates the User account.
+// Medical records and appointments are intentionally preserved for compliance.
+const deactivateDoctorAccount = async ({ userId }) => {
+  const doctor = await Doctor.findOne({ userId, isDeleted: false });
+  if (!doctor) return { status: 404, data: { message: "Doctor profile not found" } };
+
+  doctor.isDeleted = true;
+  await doctor.save();
+
+  await User.findByIdAndUpdate(userId, { isActive: false });
+
+  return { status: 200, data: { message: "Account deactivated successfully" } };
+};
+
 const updateDoctorProfile = async ({ userId, updates }) => {
   const allowed = ["fullName", "specialization", "qualifications", "experience", "bio", "licenseNumber", "consultationFee", "phone"];
   const sanitized = {};
@@ -538,4 +552,5 @@ module.exports = {
   getMyRatings,
   getPublicDoctors,
   getDoctorAnalytics,
+  deactivateDoctorAccount,
 };
