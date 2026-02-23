@@ -22,18 +22,15 @@ import PatientNavbar from "./pages/patient/PatientNavbar";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import DashboardPage from "./pages/doctor/DashboardPage";
 import DoctorProfileSetup from "./pages/doctor/DoctorProfileSetup";
+import DoctorProfilePage from "./pages/doctor/DoctorProfilePage";
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
-  // Connect Socket.io when user is already logged in (page refresh)
   useEffect(() => {
-    if (hasToken()) {
-      connectSocket();
-    }
+    if (hasToken()) connectSocket();
 
-    // Handle storage events (logout from another tab)
     const onStorage = (e) => {
       if (e.key === "accessToken") {
         if (!e.newValue) disconnectSocket();
@@ -67,11 +64,23 @@ export default function App() {
           {/* Doctor */}
           <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
             <Route path="/doctor/setup" element={<DoctorProfileSetup />} />
+
+            {/* Dashboard (with sidebar layout) */}
             <Route
               path="/doctor/dashboard"
               element={
                 <DashboardLayout>
                   <DashboardPage />
+                </DashboardLayout>
+              }
+            />
+
+            {/* Profile page (with sidebar layout) */}
+            <Route
+              path="/doctor/profile"
+              element={
+                <DashboardLayout>
+                  <DoctorProfilePage />
                 </DashboardLayout>
               }
             />

@@ -12,6 +12,7 @@ const {
   savePrescription, getPrescriptions,
   getRatings,
   listDoctors,
+  deactivateAccount,
 } = require("../controllers/doctorController");
 
 const { generatePrescriptionPdf } = require("../controllers/prescriptionController");
@@ -31,6 +32,9 @@ router.post("/profile", doctorAuth,
 );
 router.get("/profile", doctorAuth, getProfile);
 router.put("/profile", doctorAuth, updateProfile);
+
+// Account deactivation (soft-delete)
+router.delete("/account", doctorAuth, deactivateAccount);
 
 // Avatar — base64 via JSON body: { image: "data:image/jpeg;base64,..." }
 router.put("/profile/avatar", doctorAuth,

@@ -166,6 +166,18 @@ const listDoctors = async (req, res) => {
   res.status(result.status).json(result.data);
 };
 
+// ─── Account deactivation ─────────────────────────────────────────────────────
+
+/**
+ * DELETE /api/doctor/account
+ * Soft-deletes the doctor profile and deactivates the User account.
+ * Medical records and appointments are preserved.
+ */
+const deactivateAccount = async (req, res) => {
+  const result = await doctorService.deactivateDoctorAccount({ userId: req.user.userId });
+  res.status(result.status).json(result.data);
+};
+
 module.exports = {
   createProfile, getProfile, updateProfile, updateAvatar,
   getDashboard, getAnalytics,
@@ -176,4 +188,5 @@ module.exports = {
   savePrescription, getPrescriptions,
   getRatings,
   listDoctors,
+  deactivateAccount,
 };
