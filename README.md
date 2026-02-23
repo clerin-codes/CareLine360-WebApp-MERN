@@ -1,2 +1,21 @@
 # CareLine360-WebApp-MERN
 Health helpline - A web application for remote consultation &amp; emergency help in remote regions.
+
+
+<!-- Login -->
+http://localhost:5000/api/auth/login
+{
+  "identifier":"kyalini2001@gmail.com",
+  "password": "Vanai@2001"
+}
+
+<!-- Register -->
+{
+  "role": "patient",
+  "fullname": "Vanaiyalini",
+  "identifier":"kyalini2001@gmail.com",
+  "password": "Vanai@2001"
+}
+
+http://localhost:5000/api/patients/me
+
