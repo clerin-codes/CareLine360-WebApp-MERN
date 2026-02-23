@@ -31,6 +31,13 @@ import EmergencyMonitoring from "./pages/admin/EmergencyMonitoring";
 import Analytics from "./pages/admin/Analytics";
 import MeetAssign from "./pages/admin/MeetAssign";
 
+// Appointment Pages
+import BookAppointment from "./pages/BookAppointment";
+import ViewAppointments from "./pages/ViewAppointments";
+import AppointmentDetail from "./pages/AppointmentDetail";
+import ChatPage from "./pages/ChatPage";
+import PaymentPage from "./pages/PaymentPage";
+import AppointmentHistory from "./pages/AppointmentHistory";
 
 // Route Protection
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -87,6 +94,13 @@ export default function App() {
             </Route>
           </Route>
 
+          {/* Appointment Routes */}
+          <Route path="/appointments/book" element={<BookAppointment />} />
+          <Route path="/appointments/history" element={<AppointmentHistory />} />
+          <Route path="/appointments/:id/payment" element={<PaymentPage />} />
+          <Route path="/appointments/:id/chat" element={<ChatPage />} />
+          <Route path="/appointments/:id" element={<AppointmentDetail />} />
+          <Route path="/appointments" element={<ViewAppointments />} />
           {/* Emergencies tab for admin and responder */}
           <Route element={<ProtectedRoute allowedRoles={["admin", "responder"]} />}>
             <Route path="/admin/dashboard/emergencies" element={<MainLayout />}>
@@ -97,4 +111,5 @@ export default function App() {
       </Router>
     </ThemeProvider>
   );
+}
 }
