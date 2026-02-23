@@ -247,5 +247,38 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
+const deactivateMyAccount = async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-module.exports = { getMyProfile, updateMyProfile , uploadAvatar };
+    // 1) Deactivate user account
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isActive: false,
+          status: "SUSPENDED", // or "REJECTED"/"PENDING" - your choice
+          refreshTokenHash: null,
+        },
+      },
+      { returnDocument: "after" } // mongoose v7+ (instead of { new: true })
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // 2) Soft delete patient profile (if exists)
+    await Patient.findOneAndUpdate(
+      { userId },
+      { $set: { isDeleted: true } },
+      { returnDocument: "after" }
+    );
+
+    return res.json({ message: "Account deactivated successfully" });
+  } catch (e) {
+    console.error("DEACTIVATE ERROR:", e);
+    return res.status(500).json({ message: e.message || "Server error" });
+  }
+};
+
+
+module.exports = { getMyProfile, updateMyProfile , uploadAvatar , deactivateMyAccount};
