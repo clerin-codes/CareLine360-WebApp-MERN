@@ -2,17 +2,15 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "Name is required"],
-      trim: true,
-    },
     email: {
       type: String,
       required: [true, "Email is required"],
       unique: true,
       trim: true,
       lowercase: true,
+    },
+    passwordHash: {
+      type: String,
     },
     role: {
       type: String,
@@ -23,9 +21,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    specialization: {
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    status: {
       type: String,
-      trim: true,
+      default: "ACTIVE",
     },
   },
   { timestamps: true }
