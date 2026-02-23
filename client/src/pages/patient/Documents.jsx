@@ -6,6 +6,9 @@ export default function Documents() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [search, setSearch] = useState("");
+
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("other");
@@ -56,7 +59,9 @@ export default function Documents() {
   const loadDocs = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/documents");
+      const res = await api.get("/documents", {
+        params: { category: filterCategory, q: search },
+      });
       setDocs(res.data?.documents || []);
     } catch (e) {
       setMsgType("error");
@@ -76,10 +81,13 @@ export default function Documents() {
   };
 
   useEffect(() => {
-    loadDocs();
-    loadMe();
+    const t = setTimeout(() => {
+      loadDocs();
+    }, 400);
+
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search, filterCategory]);
 
   const upload = async () => {
     if (!file) {
@@ -350,6 +358,40 @@ export default function Documents() {
               Upload Document
             </button>
           </div>
+        </div>
+
+        {/* filter and search */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-sm text-gray-600">Filter:</div>
+          {/* Category Filter */}
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-3 py-2 rounded-xl ring-1 ring-gray-200 bg-white text-sm"
+          >
+            <option value="all">All</option>
+            {categories.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Search */}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title or filename..."
+            className="flex-1 px-3 py-2 rounded-xl ring-1 ring-gray-200 bg-white text-sm"
+          />
+
+          {/* Clear */}
+          <button
+            onClick={() => setSearch("")}
+            className="px-3 py-2 rounded-xl bg-gray-100 text-gray-900 text-sm hover:bg-gray-200 transition"
+          >
+            Clear
+          </button>
         </div>
 
         {/* List */}
