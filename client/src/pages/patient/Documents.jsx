@@ -140,6 +140,37 @@ export default function Documents() {
     }
   };
 
+  const handleOpen = (doc) => {
+  const url = doc.viewUrl || doc.fileUrl;
+
+  // Images
+  if (doc.mimeType?.startsWith("image/")) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // PDF
+  if (doc.mimeType === "application/pdf") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Word documents → use Google viewer
+  const isWord =
+    doc.mimeType === "application/msword" ||
+    doc.mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  if (isWord) {
+    const gview = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
+    window.open(gview, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // fallback download
+  window.open(url, "_blank");
+};
+
   // ✅ supports different backend field names (in case it’s not avatarUrl)
   // const avatar = me?.avatarUrl;
 
@@ -354,14 +385,12 @@ export default function Documents() {
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <a
-                      href={d.viewUrl || d.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      onClick={() => handleOpen(d)}
                       className="px-3 py-2 rounded-xl bg-blue-600 text-white text-sm hover:opacity-95 transition"
                     >
                       Open
-                    </a>
+                    </button>
 
                     <button
                       onClick={() => remove(d._id)}
