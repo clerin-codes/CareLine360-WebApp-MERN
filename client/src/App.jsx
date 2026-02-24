@@ -101,15 +101,8 @@ export default function App() {
           <Route path="/appointments/:id/chat" element={<ChatPage />} />
           <Route path="/appointments/:id" element={<AppointmentDetail />} />
           <Route path="/appointments" element={<ViewAppointments />} />
-          {/* Emergencies tab for admin and responder */}
-          <Route element={<ProtectedRoute allowedRoles={["admin", "responder"]} />}>
-            <Route path="/admin/dashboard/emergencies" element={<MainLayout />}>
-              <Route index element={<EmergencyMonitoring />} />
-            </Route>
-          </Route>
         </Routes>
       </Router>
     </ThemeProvider>
   );
-}
 }
