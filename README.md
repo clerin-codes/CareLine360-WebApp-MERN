@@ -28,5 +28,11 @@ POST
 http://localhost:5000/api/patients/me/ai-explain
 
 {
-  "text": "Diagnosis: Hypertension. Medicine: Amlodipine 5mg once daily."
+  "text": "Diagnosis: Hypertension. Medicine: Amlodipine 5mg daily.",
+  "language": "Sinhala"
+}
+
+{
+  "text": "Diagnosis: Hypertension. Medicine: Amlodipine 5mg daily.",
+  "language": "Tamil"
 }
