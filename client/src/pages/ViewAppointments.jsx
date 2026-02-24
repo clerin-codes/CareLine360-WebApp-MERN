@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useUser } from "../context/UserContext";
+import { getRole } from "../auth/authStorage";
 import { useToast } from "../context/ToastContext";
 import { getAppointments, transitionStatus } from "../api/appointmentApi";
 import AppointmentCard from "../components/appointments/AppointmentCard";
@@ -11,7 +11,8 @@ import LoadingSpinner from "../components/ui/LoadingSpinner";
 import EmptyState from "../components/ui/EmptyState";
 
 export default function ViewAppointments() {
-  const { currentUser, loading: userLoading } = useUser();
+  const currentUserRole = getRole();
+  const currentUserId = localStorage.getItem("userId");
   const toast = useToast();
   const [appointments, setAppointments] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -21,12 +22,12 @@ export default function ViewAppointments() {
   const [cancelTarget, setCancelTarget] = useState(null);
 
   const fetchAppointments = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUserId) return;
     setLoading(true);
     try {
       const params = { ...filters };
-      if (currentUser.role === "patient") params.patient = currentUser._id;
-      if (currentUser.role === "doctor") params.doctor = currentUser._id;
+      if (currentUserRole === "patient") params.patient = currentUserId;
+      if (currentUserRole === "doctor") params.doctor = currentUserId;
       // Exclude completed and cancelled (those go to history)
       if (!params.status) {
         params.status = "pending,confirmed".split(",").join(",");
@@ -40,7 +41,7 @@ export default function ViewAppointments() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, filters]);
+  }, [currentUserId, currentUserRole, filters]);
 
   useEffect(() => {
     fetchAppointments();
@@ -66,7 +67,7 @@ export default function ViewAppointments() {
     }
   };
 
-  if (userLoading) return <LoadingSpinner />;
+  if (!currentUserId) return <LoadingSpinner />;
 
   return (
     <div>
@@ -85,11 +86,11 @@ export default function ViewAppointments() {
             <div key={apt._id}>
               <AppointmentCard
                 appointment={apt}
-                currentUser={currentUser}
+                currentUserRole={currentUserRole}
                 onReschedule={setRescheduleTarget}
                 onCancel={setCancelTarget}
               />
-              {currentUser?.role === "doctor" && apt.status === "pending" && (
+              {currentUserRole === "doctor" && apt.status === "pending" && (
                 <div className="mt-1 ml-4">
                   <button
                     onClick={() => handleConfirm(apt)}
@@ -99,7 +100,7 @@ export default function ViewAppointments() {
                   </button>
                 </div>
               )}
-              {currentUser?.role === "doctor" && apt.status === "confirmed" && (
+              {currentUserRole === "doctor" && apt.status === "confirmed" && (
                 <div className="mt-1 ml-4">
                   <button
                     onClick={() => handleComplete(apt)}

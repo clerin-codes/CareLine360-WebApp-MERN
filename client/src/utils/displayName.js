@@ -1,8 +1,9 @@
 /**
- * Derive a display name from a user's email address.
- * e.g. "john.smith@careline.com" → "John Smith"
+ * Return a display name for a user.
+ * Prefers fullName from the User model; falls back to email-derived name.
  */
 export function displayName(user) {
+  if (user?.fullName) return user.fullName;
   if (!user?.email) return "Unknown";
   const local = user.email.split("@")[0];
   return local

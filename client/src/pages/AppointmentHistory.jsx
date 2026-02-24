@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useUser } from "../context/UserContext";
+import { getRole } from "../auth/authStorage";
 import { getAppointments } from "../api/appointmentApi";
 import AppointmentCard from "../components/appointments/AppointmentCard";
 import Pagination from "../components/ui/Pagination";
@@ -7,19 +7,20 @@ import LoadingSpinner from "../components/ui/LoadingSpinner";
 import EmptyState from "../components/ui/EmptyState";
 
 export default function AppointmentHistory() {
-  const { currentUser, loading: userLoading } = useUser();
+  const currentUserRole = getRole();
+  const currentUserId = localStorage.getItem("userId");
   const [appointments, setAppointments] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
   const fetchHistory = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUserId) return;
     setLoading(true);
     try {
       const params = { page, limit: 10, sort: "-date" };
-      if (currentUser.role === "patient") params.patient = currentUser._id;
-      if (currentUser.role === "doctor") params.doctor = currentUser._id;
+      if (currentUserRole === "patient") params.patient = currentUserId;
+      if (currentUserRole === "doctor") params.doctor = currentUserId;
 
       // Fetch completed and cancelled separately and merge
       const [completedRes, cancelledRes] = await Promise.all([
@@ -46,13 +47,13 @@ export default function AppointmentHistory() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, page]);
+  }, [currentUserId, currentUserRole, page]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
-  if (userLoading) return <LoadingSpinner />;
+  if (!currentUserId) return <LoadingSpinner />;
 
   return (
     <div>
@@ -66,7 +67,7 @@ export default function AppointmentHistory() {
       ) : (
         <div className="space-y-4">
           {appointments.map((apt) => (
-            <AppointmentCard key={apt._id} appointment={apt} currentUser={currentUser} />
+            <AppointmentCard key={apt._id} appointment={apt} currentUserRole={currentUserRole} />
           ))}
         </div>
       )}
