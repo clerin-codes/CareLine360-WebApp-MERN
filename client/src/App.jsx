@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 
 // Layouts
@@ -45,7 +45,6 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 export default function App() {
   return (
     <ThemeProvider>
-      <Router>
         <Routes>
           {/* Landing */}
           <Route path="/" element={<LandingPage />} />
@@ -101,15 +100,7 @@ export default function App() {
           <Route path="/appointments/:id/chat" element={<ChatPage />} />
           <Route path="/appointments/:id" element={<AppointmentDetail />} />
           <Route path="/appointments" element={<ViewAppointments />} />
-          {/* Emergencies tab for admin and responder */}
-          <Route element={<ProtectedRoute allowedRoles={["admin", "responder"]} />}>
-            <Route path="/admin/dashboard/emergencies" element={<MainLayout />}>
-              <Route index element={<EmergencyMonitoring />} />
-            </Route>
-          </Route>
         </Routes>
-      </Router>
     </ThemeProvider>
   );
-}
 }
