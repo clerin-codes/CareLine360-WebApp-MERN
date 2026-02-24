@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useUser } from "../../context/UserContext";
 import { getUsers } from "../../api/userApi";
 import { createAppointment } from "../../api/appointmentApi";
 import { CONSULTATION_TYPES, TIME_SLOTS } from "../../utils/constants";
@@ -7,7 +6,6 @@ import { useToast } from "../../context/ToastContext";
 import { displayName } from "../../utils/displayName";
 
 export default function BookingForm({ symptoms, priority, onBooked }) {
-  const { currentUser } = useUser();
   const toast = useToast();
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState({
@@ -37,7 +35,6 @@ export default function BookingForm({ symptoms, priority, onBooked }) {
 
     try {
       const data = {
-        patient: currentUser._id,
         doctor: form.doctor,
         date: form.date,
         time: form.time,

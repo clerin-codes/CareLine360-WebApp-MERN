@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useUser } from "../context/UserContext";
+import { getRole } from "../auth/authStorage";
 import { useToast } from "../context/ToastContext";
 import { getAppointmentById, transitionStatus } from "../api/appointmentApi";
 import { getPaymentByAppointment, verifyPayment, failPayment } from "../api/paymentApi";
@@ -13,7 +13,7 @@ import { displayName } from "../utils/displayName";
 
 export default function AppointmentDetail() {
   const { id } = useParams();
-  const { currentUser } = useUser();
+  const currentUserRole = getRole();
   const toast = useToast();
   const [appointment, setAppointment] = useState(null);
   const [payment, setPayment] = useState(null);
@@ -85,7 +85,7 @@ export default function AppointmentDetail() {
   if (!appointment) return <div className="text-center py-12 text-gray-500">Appointment not found</div>;
 
   const { patient, doctor, date, time, consultationType, symptoms, notes, status, priority, rescheduleHistory } = appointment;
-  const isDoctor = currentUser?.role === "doctor";
+  const isDoctor = currentUserRole === "doctor";
 
   return (
     <div>
