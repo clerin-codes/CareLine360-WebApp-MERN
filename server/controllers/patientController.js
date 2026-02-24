@@ -320,33 +320,40 @@ const medicalRecord = async (req, res) => {
 
 const explainMedicalText = async (req, res) => {
   try {
-    const { text } = req.body;
-    if (!text) return res.status(400).json({ message: "Text is required" });
+    const { text, language } = req.body;
 
-    const model = genAI.getGenerativeModel({
-      model: "models/gemini-flash-latest"
-    });
+    if (!text) {
+      return res.status(400).json({ message: "Text is required" });
+    }
+
+    // Default language = English
+    const selectedLanguage = language || "english";
 
     const result = await model.generateContent(
       `Explain this medical information in simple language for a patient.
-      
+
+      Language: ${selectedLanguage}
+
       Do NOT use markdown formatting.
       Do NOT use headings.
       Do NOT use bold text.
-      Return clean plain text only.
+      Do NOT give medical advice.
+      Do NOT change dosage.
+      Only explain meaning clearly.
 
       ${text}`
     );
 
-    const response = result.response.text();
+    const explanation = result.response.text();
 
-    res.json({
-      explanation: response
+    return res.json({
+      language: selectedLanguage,
+      explanation
     });
 
   } catch (error) {
     console.error("GEMINI ERROR:", error);
-    res.status(500).json({ message: "AI service error" });
+    return res.status(500).json({ message: "AI service error" });
   }
 };
 
