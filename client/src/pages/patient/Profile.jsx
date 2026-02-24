@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/axios";
-import PatientNavbar from "./PatientNavbar";
+import PatientNavbar from "./components/PatientNavbar";
 
 /**
  * Try to get name/email from whatever you saved at login.
