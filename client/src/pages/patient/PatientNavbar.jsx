@@ -8,6 +8,7 @@ export default function PatientNavbar() {
   const navItems = useMemo(
     () => [
       { label: "Overview", href: "/patient/dashboard" },
+      { label: "Appointments", href: "/appointments" },
       { label: "Documents", href: "/patient/documents" },
       { label: "Medical History", href: "/patient/medical-history" },
       { label: "AI Chat", href: "/patient/messages" },
@@ -60,7 +61,9 @@ export default function PatientNavbar() {
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
           {navItems.map((item) => {
-            const isActive = activePath === item.href;
+            const isActive = item.href === "/appointments"
+                ? activePath.startsWith("/appointments")
+                : activePath === item.href;
             return (
               <a
                 key={item.href}
@@ -127,7 +130,9 @@ export default function PatientNavbar() {
       <div className="md:hidden border-t bg-white/60">
         <div className="max-w-6xl mx-auto px-5 py-2 flex gap-2 overflow-x-auto">
           {navItems.map((item) => {
-            const isActive = activePath === item.href;
+            const isActive = item.href === "/appointments"
+                ? activePath.startsWith("/appointments")
+                : activePath === item.href;
             return (
               <a
                 key={item.href}

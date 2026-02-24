@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calendar,
@@ -15,8 +16,8 @@ import {
 import { DOCTOR_INFO } from "../../utils/dashboardData";
 
 const NAV_MAIN = [
-  { icon: LayoutDashboard, label: "Dashboard" },
-  { icon: Calendar,        label: "Appointments", badge: 5 },
+  { icon: LayoutDashboard, label: "Dashboard", route: "/doctor/dashboard" },
+  { icon: Calendar,        label: "Appointments", badge: 5, route: "/appointments" },
   { icon: ClipboardList,   label: "Availability" },
   { icon: FileText,        label: "Medical Records" },
   { icon: Users,           label: "My Patients" },
@@ -30,6 +31,7 @@ const NAV_ACCOUNT = [
 
 export default function Sidebar({ active, setActive }) {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   return (
     /* cl-sidebar handles all the glassmorphism + flex-col + height */
@@ -56,12 +58,15 @@ export default function Sidebar({ active, setActive }) {
 
       {/* ── Navigation ── */}
       <nav className="flex-1 px-2 pt-3 space-y-0.5 overflow-y-auto scrollbar-none">
-        {NAV_MAIN.map(({ icon: Icon, label, badge }) => {
+        {NAV_MAIN.map(({ icon: Icon, label, badge, route }) => {
           const isActive = active === label;
           return (
             <button
               key={label}
-              onClick={() => setActive(label)}
+              onClick={() => {
+                setActive(label);
+                if (route) navigate(route);
+              }}
               title={collapsed ? label : ""}
               className={`
                 relative flex items-center w-full rounded-xl h-11
