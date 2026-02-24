@@ -1,19 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "../context/UserContext";
+import { getRole } from "../auth/authStorage";
 import TriageForm from "../components/appointments/TriageForm";
 import BookingForm from "../components/appointments/BookingForm";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 export default function BookAppointment() {
-  const { currentUser, loading } = useUser();
+  const role = getRole();
   const navigate = useNavigate();
   const [symptoms, setSymptoms] = useState("");
   const [priority, setPriority] = useState("low");
 
-  if (loading) return <LoadingSpinner />;
-
-  if (currentUser?.role !== "patient") {
+  if (role !== "patient") {
     return (
       <div className="text-center py-16">
         <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center">
@@ -22,7 +19,7 @@ export default function BookAppointment() {
           </svg>
         </div>
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Booking Restricted</h2>
-        <p className="text-gray-500">Only patients can book appointments. Switch to a patient user from the navbar.</p>
+        <p className="text-gray-500">Only patients can book appointments.</p>
       </div>
     );
   }

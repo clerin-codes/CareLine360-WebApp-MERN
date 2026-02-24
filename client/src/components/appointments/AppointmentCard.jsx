@@ -10,10 +10,10 @@ const PRIORITY_ACCENT = {
   low: "border-l-gray-300",
 };
 
-export default function AppointmentCard({ appointment, currentUser, onReschedule, onCancel }) {
+export default function AppointmentCard({ appointment, currentUserRole, onReschedule, onCancel }) {
   const { _id, patient, doctor, date, time, consultationType, status, priority } = appointment;
 
-  const isPatient = currentUser?.role === "patient";
+  const isPatient = currentUserRole === "patient";
 
   return (
     <div className={`bg-white rounded-xl shadow-sm ring-1 ring-gray-100 p-5 hover:shadow-md hover:ring-gray-200 transition-all border-l-4 ${PRIORITY_ACCENT[priority] || "border-l-gray-300"}`}>
