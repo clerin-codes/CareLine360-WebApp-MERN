@@ -5,7 +5,6 @@ const {
   updateMyProfile , 
   uploadAvatar, 
   deactivateMyAccount , 
-  medicalRecord,
   explainMedicalText,
 
 
@@ -44,14 +43,6 @@ router.patch(
   authMiddleware,
   roleMiddleware(["patient"]),
   deactivateMyAccount
-);
-
-// Existing
-router.get(
-  "/me/medical-record", 
-  authMiddleware, 
-  roleMiddleware(["patient"]), 
-  medicalRecord
 );
 
 router.post(
