@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/axios";
 import { motion, AnimatePresence } from "framer-motion";
+import EmergencySOSButton from "../../components/EmergencySOSButton";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -51,9 +52,11 @@ export default function PatientDashboard() {
   const navItems = useMemo(
     () => [
       { label: "Overview", href: "/patient/dashboard" },
+      { label: "Appointments", href: "/appointments" },
       { label: "Documents", href: "/patient/documents" },
       { label: "Medical History", href: "/patient/medical-history" },
       { label: "AI Chat", href: "/patient/messages" },
+      { label: "Directory", href: "/patient/directory" },
     ],
     []
   );
@@ -101,7 +104,7 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f6fbff] to-white bg-[url('/')] bg-cover bg-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
       {/* Top Nav */}
       <div className="sticky top-0 z-10 backdrop-blur bg-white">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -119,7 +122,9 @@ export default function PatientDashboard() {
 
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
             {navItems.map((item) => {
-              const isActive = activePath === item.href;
+              const isActive = item.href === "/appointments"
+                    ? activePath.startsWith("/appointments")
+                    : activePath === item.href;
               return (
                 <a
                   key={item.href}
@@ -182,7 +187,9 @@ export default function PatientDashboard() {
         <div className="md:hidden border-t bg-white/60">
           <div className="max-w-6xl mx-auto px-5 py-2 flex gap-2 overflow-x-auto">
             {navItems.map((item) => {
-              const isActive = activePath === item.href;
+              const isActive = item.href === "/appointments"
+                    ? activePath.startsWith("/appointments")
+                    : activePath === item.href;
               return (
                 <a
                   key={item.href}
@@ -405,7 +412,7 @@ export default function PatientDashboard() {
             {/* Quick nav cards */}
             <div className="grid sm:grid-cols-2 gap-5">
               <motion.a
-                href="/patient/documents"
+                href="/appointments/book"
                 className="bg-white rounded-3xl shadow-sm p-5 hover:shadow-md transition"
                 variants={fadeUp}
                 initial="hidden"
@@ -413,14 +420,14 @@ export default function PatientDashboard() {
                 custom={2}
                 whileHover={{ y: -2 }}
               >
-                <div className="font-semibold text-gray-900">Documents</div>
-                <div className="text-sm text-gray-500 mt-1">Upload & manage reports</div>
-                <div className="mt-6 text-3xl font-semibold text-gray-900">My Files</div>
-                <div className="mt-4 text-sm text-blue-700 font-medium">Open →</div>
+                <div className="font-semibold text-gray-900">Appointments</div>
+                <div className="text-sm text-gray-500 mt-1">Schedule a consultation</div>
+                <div className="mt-6 text-3xl font-semibold text-gray-900">Book Now</div>
+                <div className="mt-4 text-sm text-blue-700 font-medium">Book →</div>
               </motion.a>
 
               <motion.a
-                href="/patient/medical-history"
+                href="/patient/documents"
                 className="bg-white rounded-3xl shadow-sm p-5 hover:shadow-md transition"
                 variants={fadeUp}
                 initial="hidden"
@@ -428,10 +435,10 @@ export default function PatientDashboard() {
                 custom={3}
                 whileHover={{ y: -2 }}
               >
-                <div className="font-semibold text-gray-900">Medical History</div>
-                <div className="text-sm text-gray-500 mt-1">View past entries</div>
-                <div className="mt-6 text-3xl font-semibold text-gray-900">Timeline</div>
-                <div className="mt-4 text-sm text-blue-700 font-medium">View →</div>
+                <div className="font-semibold text-gray-900">Documents</div>
+                <div className="text-sm text-gray-500 mt-1">Upload & manage reports</div>
+                <div className="mt-6 text-3xl font-semibold text-gray-900">My Files</div>
+                <div className="mt-4 text-sm text-blue-700 font-medium">Open →</div>
               </motion.a>
             </div>
 
@@ -505,6 +512,9 @@ export default function PatientDashboard() {
             </motion.div>
           </div>
         </div>
+      </div>
+      <div className="fmax-w-6xl mx-auto mt-8 flex justify-center">
+        <EmergencySOSButton />
       </div>
     </div>
   );

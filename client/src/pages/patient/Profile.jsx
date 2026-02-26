@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/axios";
-import PatientNavbar from "./PatientNavbar";
+import PatientNavbar from "./components/PatientNavbar";
 
 /**
  * Try to get name/email from whatever you saved at login.
@@ -306,6 +306,25 @@ export default function Profile() {
     errors[k] ? <p className="text-xs text-red-600 mt-1">{errors[k]}</p> : null;
 
   if (loading) return <div className="p-6">Loading...</div>;
+
+  const deactivateAccount = async () => {
+  const confirm = window.confirm(
+    "Are you sure you want to deactivate your account?\n\nYou will not be able to access the system until reactivated."
+  );
+
+  if (!confirm) return;
+
+  try {
+    await api.patch("/patients/me/deactivate");
+
+    localStorage.clear();
+    alert("Your account has been deactivated.");
+    window.location.href = "/login";
+  } catch (err) {
+    setMsgType("error");
+    setMsg(err.response?.data?.message || "Failed to deactivate account");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f6fbff] to-white bg-[url('/')] bg-cover bg-center p-6">
@@ -653,6 +672,26 @@ export default function Profile() {
           </form>
         )}
       </div>
+      {/* Danger Zone */}
+<div className="mt-10 bg-red-50 rounded-2xl p-6 ring-1 ring-red-100">
+  <div className="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <div className="text-sm font-semibold text-red-700">
+        Deactivate Account
+      </div>
+      <div className="text-xs text-red-600 mt-1">
+        This will disable your account and prevent login access.
+      </div>
+    </div>
+
+    <button
+      onClick={deactivateAccount}
+      className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm hover:opacity-95 transition"
+    >
+      Deactivate
+    </button>
+  </div>
+</div>
     </div>
   );
 }

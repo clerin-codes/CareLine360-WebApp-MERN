@@ -22,7 +22,7 @@ const appointmentSchema = new mongoose.Schema(
     },
     consultationType: {
       type: String,
-      enum: ["in-person", "video", "phone", "physical"],
+      enum: ["in-person", "video", "phone", "physical"], // "physical" kept from doctor-module
       required: [true, "Consultation type is required"],
     },
     symptoms: {
@@ -57,8 +57,15 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
+    meetingUrl: {
+      type: String,
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Appointment", appointmentSchema);
