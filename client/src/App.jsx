@@ -22,6 +22,7 @@ import Documents from "./pages/patient/Documents";
 import PatientNavbar from "./pages/patient/components/PatientNavbar";
 import AiChat from "./pages/patient/AiChat";
 import PatientMedicalHistory from "./pages/patient/PatientMedicalHistory";
+import Directory from "./pages/patient/Directory";
 
 // Doctor Pages
 import DashboardPage from "./pages/doctor/DashboardPage";
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="/patient/navbar" element={<PatientNavbar />} />
             <Route path="/patient/messages" element={<AiChat />} />
             <Route path="/patient/medical-history" element={<PatientMedicalHistory />} />
+            <Route path="/patient/directory" element={<Directory />} />
           </Route>
 
           {/* Doctor Dashboard */}
