@@ -1,17 +1,11 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { generatePrescriptionPdf } from "../../api/doctorApi";
 import { api } from "../../api/axios";
 
-async function triggerDownload(fileUrl, filename = "prescription.pdf") {
-  // Proxy through our own backend so CORS and Content-Disposition are handled
-  // correctly — direct Cloudinary fetch results in an empty/corrupt blob.
-  const response = await api.get("/doctor/prescriptions/download", {
-    params: { url: fileUrl, filename },
-    responseType: "blob",
-  });
+// Trigger a browser file-save from a blob received via axios
+function saveBlobAsPdf(blobData, filename) {
   const blobUrl = URL.createObjectURL(
-    new Blob([response.data], { type: "application/pdf" }),
+    new Blob([blobData], { type: "application/pdf" }),
   );
   const a = document.createElement("a");
   a.href = blobUrl;
@@ -40,8 +34,7 @@ export default function PrescriptionModal({
   const [medicines, setMedicines] = useState([emptyMed()]);
   const [notes, setNotes] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [done, setDone] = useState(null); // { fileUrl }
+  const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
   // Lock body scroll while modal is open
@@ -64,16 +57,25 @@ export default function PrescriptionModal({
     setError("");
     setGenerating(true);
     try {
-      const r = await generatePrescriptionPdf({
-        patientId,
-        appointmentId,
-        medicines: validMeds,
-        notes,
-      });
-      setDone({ fileUrl: r.data.fileUrl });
+      const filename = `prescription-${patientName || patientId}.pdf`;
+      const response = await api.post(
+        "/doctor/prescriptions/generate",
+        { patientId, appointmentId, medicines: validMeds, notes },
+        { responseType: "blob" },
+      );
+      // Auto-download the PDF buffer returned directly from the server
+      saveBlobAsPdf(response.data, filename);
+      setDone(true);
       onSuccess?.();
     } catch (e) {
-      setError(e?.response?.data?.message || "Failed to generate prescription");
+      // When responseType:'blob', error body comes back as a Blob — parse it
+      try {
+        const text = await e?.response?.data?.text?.();
+        const json = JSON.parse(text || "{}");
+        setError(json.message || "Failed to generate prescription");
+      } catch {
+        setError("Failed to generate prescription");
+      }
     } finally {
       setGenerating(false);
     }
@@ -120,40 +122,15 @@ export default function PrescriptionModal({
                 Prescription Generated!
               </p>
               <p className="text-sm text-gray-500">
-                The PDF has been uploaded to Cloudinary and saved to the
-                patient's profile.
+                The PDF has been uploaded to Cloudinary, saved to the
+                patient&apos;s profile, and downloaded to your device.
               </p>
               <button
                 type="button"
-                disabled={downloading}
-                onClick={async () => {
-                  setDownloading(true);
-                  await triggerDownload(
-                    done.fileUrl,
-                    `prescription-${patientName || patientId}.pdf`,
-                  );
-                  setDownloading(false);
-                }}
-                className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                onClick={onClose}
+                className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
               >
-                {downloading ? (
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                )}
-                {downloading ? "Downloading…" : "Download PDF"}
+                Close
               </button>
             </div>
           ) : (
