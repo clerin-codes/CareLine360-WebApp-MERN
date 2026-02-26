@@ -150,7 +150,7 @@ const EmergencyMonitoring = () => {
                 <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-3xl shadow-sm overflow-hidden text-left">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-[var(--bg-subtle)] border-b border-[var(--border)] text-[var(--text-muted)] text-[9px] font-black uppercase tracking-[0.25em]">
+                            <thead className="bg-[var(--bg-subtle)] border-b border-[var(--border)] text-[var(--text-secondary)] text-[10px] font-black uppercase tracking-[0.25em]">
                                 <tr>
                                     <th className="py-5 px-8">Case Subject</th>
                                     <th className="py-5 px-8">Registry Timestamp</th>
@@ -171,8 +171,8 @@ const EmergencyMonitoring = () => {
                                         onClick={() => openModal(e)}
                                     >
                                         <td className="py-5 px-6">
-                                            <div className="font-bold text-slate-900 dark:text-white text-base">{e.patient?.fullName || 'Identity Pending'}</div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-500 font-medium max-w-[280px] truncate italic">"{e.description}"</div>
+                                            <div className="font-bold text-[var(--text-primary)] text-base">{e.patient?.fullName || 'Identity Pending'}</div>
+                                            <div className="text-xs text-[var(--text-secondary)] font-medium max-w-[280px] truncate italic">"{e.description}"</div>
                                         </td>
                                         <td className="py-5 px-6">
                                             <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
@@ -184,7 +184,7 @@ const EmergencyMonitoring = () => {
                                             <StatusBadge status={e.status} />
                                         </td>
                                         <td className="py-5 px-6">
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 group">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-secondary)] group">
                                                 <MapPin size={14} className="text-teal-500" />
                                                 <span className="font-mono tracking-tighter">{e.latitude?.toFixed(5) || 0}, {e.longitude?.toFixed(5) || 0}</span>
                                             </div>
