@@ -1,9 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ════════════════════════════════════════════════════════
    CareLine360 – Unified Design System
@@ -18,18 +14,18 @@
   --color-cl-cyan: #06b6d4;
   --color-cl-light: #5eead4;
 
-  --color-primary:   #0077b6;
+  --color-primary: #0077b6;
   --color-secondary: #00b4d8;
-  --color-accent:    #90e0ef;
-  --color-success:   #10b981;
-  --color-warning:   #f59e0b;
-  --color-danger:    #ef4444;
-  --color-info:      #3b82f6;
-  --color-purple:    #8b5cf6;
+  --color-accent: #90e0ef;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-purple: #8b5cf6;
 
-  --shadow-glass:      0 4px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --shadow-glass: 0 4px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   --shadow-glass-dark: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-teal:       0 8px 32px rgba(13, 148, 136, 0.35);
+  --shadow-teal: 0 8px 32px rgba(13, 148, 136, 0.35);
 }
 
 /* ─────────────────────────────────────────────
@@ -63,75 +59,80 @@
   /* ── Light mode CSS variables ── */
   :root {
     /* Surfaces */
-    --bg-page:        #f3f4f6; /* Soft cool gray */
-    --bg-surface:     #ffffff;
-    --bg-subtle:      #f9fafb;
-    --bg-muted:       #e5e7eb;
+    --bg-page: #f3f4f6;
+    /* Soft cool gray */
+    --bg-surface: #ffffff;
+    --bg-subtle: #f9fafb;
+    --bg-muted: #e5e7eb;
 
     /* Text */
-    --text-primary:   #111827; /* Near black */
-    --text-secondary: #4b5563; /* Medium gray */
-    --text-muted:     #9ca3af;
+    --text-primary: #111827;
+    /* Near black */
+    --text-secondary: #4b5563;
+    /* Medium gray */
+    --text-muted: #9ca3af;
 
     /* Borders */
-    --border:         #e5e7eb;
-    --border-strong:  #d1d5db;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
 
     /* Header */
-    --header-bg:      rgba(255, 255, 255, 0.85);
-    --header-border:  rgba(0, 0, 0, 0.05);
-    --header-shadow:  0 4px 12px rgba(0, 0, 0, 0.03);
+    --header-bg: rgba(255, 255, 255, 0.85);
+    --header-border: rgba(0, 0, 0, 0.05);
+    --header-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 
     /* Glass */
-    --glass-bg:       rgba(255, 255, 255, 0.7);
-    --glass-border:   rgba(255, 255, 255, 0.4);
-    --glass-shadow:   rgba(0, 0, 0, 0.05);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: rgba(0, 0, 0, 0.05);
 
     /* Actions */
-    --primary:        #0d9488;
-    --secondary:      #0891b2;
-    --success:        #059669;
-    --warning:        #d97706;
-    --danger:         #dc2626;
-    --info:           #2563eb;
-    --purple:         #7c3aed;
+    --primary: #0d9488;
+    --secondary: #0891b2;
+    --success: #059669;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --info: #2563eb;
+    --purple: #7c3aed;
   }
 
   /* ── Dark mode CSS variables ── */
   html.dark {
     /* Surfaces */
-    --bg-page:        #030712; /* Deepest blue-black */
-    --bg-surface:     #0f172a; /* Navy slate */
-    --bg-subtle:      #1e293b;
-    --bg-muted:       #334155;
+    --bg-page: #030712;
+    /* Deepest blue-black */
+    --bg-surface: #0f172a;
+    /* Navy slate */
+    --bg-subtle: #1e293b;
+    --bg-muted: #334155;
 
     /* Text */
-    --text-primary:   #f9fafb;
+    --text-primary: #f9fafb;
     --text-secondary: #94a3b8;
-    --text-muted:     #64748b;
+    --text-muted: #64748b;
 
     /* Borders */
-    --border:         #1e293b;
-    --border-strong:  #334155;
+    --border: #1e293b;
+    --border-strong: #334155;
 
     /* Header */
-    --header-bg:      rgba(3, 7, 18, 0.85);
-    --header-border:  rgba(255, 255, 255, 0.08);
-    --header-shadow:  0 4px 12px rgba(0, 0, 0, 0.4);
+    --header-bg: rgba(3, 7, 18, 0.85);
+    --header-border: rgba(255, 255, 255, 0.08);
+    --header-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
     /* Glass */
-    --glass-bg:       rgba(15, 23, 42, 0.7);
-    --glass-border:   rgba(255, 255, 255, 0.08);
-    --glass-shadow:   rgba(0, 0, 0, 0.3);
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: rgba(0, 0, 0, 0.3);
 
     /* Actions (Dark Adjusted) */
-    --primary:        #14b8a6;
-    --secondary:      #06b6d4;
-    --success:        #10b981;
-    --warning:        #fbbf24;
-    --danger:         #f87171;
-    --info:           #60a5fa;
-    --purple:         #a78bfa;
+    --primary: #14b8a6;
+    --secondary: #06b6d4;
+    --success: #10b981;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #60a5fa;
+    --purple: #a78bfa;
   }
 
   body {
@@ -149,12 +150,20 @@
   }
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   ::-webkit-scrollbar-thumb {
     background: rgba(13, 148, 136, 0.3);
     border-radius: 10px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(13, 148, 136, 0.55);
   }
@@ -361,30 +370,71 @@
   }
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  .stagger > * { animation: fade-in 0.4s ease both; }
-  .stagger > *:nth-child(1) { animation-delay: 0.04s; }
-  .stagger > *:nth-child(2) { animation-delay: 0.09s; }
-  .stagger > *:nth-child(3) { animation-delay: 0.14s; }
-  .stagger > *:nth-child(4) { animation-delay: 0.19s; }
-  .stagger > *:nth-child(5) { animation-delay: 0.24s; }
-  .stagger > *:nth-child(6) { animation-delay: 0.29s; }
+  .stagger>* {
+    animation: fade-in 0.4s ease both;
+  }
+
+  .stagger>*:nth-child(1) {
+    animation-delay: 0.04s;
+  }
+
+  .stagger>*:nth-child(2) {
+    animation-delay: 0.09s;
+  }
+
+  .stagger>*:nth-child(3) {
+    animation-delay: 0.14s;
+  }
+
+  .stagger>*:nth-child(4) {
+    animation-delay: 0.19s;
+  }
+
+  .stagger>*:nth-child(5) {
+    animation-delay: 0.24s;
+  }
+
+  .stagger>*:nth-child(6) {
+    animation-delay: 0.29s;
+  }
 
   /* ══════════════════════════════
      UTILITIES
   ══════════════════════════════ */
-  .scrollbar-none::-webkit-scrollbar { display: none; }
-  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 
-  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: var(--border-strong);
     border-radius: 10px;
   }
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
   }

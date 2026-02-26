@@ -337,7 +337,6 @@ const MeetAssign = () => {
                     ))
                 )}
             </div>
-            )}
         </div>
     );
 };
