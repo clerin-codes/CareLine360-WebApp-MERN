@@ -210,31 +210,103 @@ const EmergencyMonitoring = () => {
             )}
 
             {activeTab === 'config' && (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden text-left p-6">
-                    <h3 className="text-lg font-bold mb-4">Config — Manage Hospitals</h3>
-                    <form onSubmit={handleAddHospital} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <input value={newHospital.name} onChange={(e) => handleNewHospitalChange('name', e.target.value)} placeholder="Hospital name" className="p-3 border rounded-lg" />
-                        <input value={newHospital.contact} onChange={(e) => handleNewHospitalChange('contact', e.target.value)} placeholder="Contact (phone/email)" className="p-3 border rounded-lg" />
-                        <input value={newHospital.address} onChange={(e) => handleNewHospitalChange('address', e.target.value)} placeholder="Address" className="p-3 border rounded-lg md:col-span-2" />
-                        <input value={newHospital.lat} onChange={(e) => handleNewHospitalChange('lat', e.target.value)} placeholder="Latitude" className="p-3 border rounded-lg" />
-                        <input value={newHospital.lng} onChange={(e) => handleNewHospitalChange('lng', e.target.value)} placeholder="Longitude" className="p-3 border rounded-lg" />
-                        <div className="flex items-center gap-2 md:col-span-2">
-                            <button type="button" onClick={handleFetchLocation} className="px-4 py-2 rounded-xl bg-teal-600 text-white">Use Current Location</button>
-                            <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 text-white">Add Hospital</button>
-                            <button type="button" onClick={() => { setNewHospital({ name: '', address: '', contact: '', lat: '', lng: '' }); }} className="px-4 py-2 rounded-xl border">Reset</button>
+                <div className="space-y-6 text-left">
+                    {/* Add Hospital Form */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+                        <div className="mb-5">
+                            <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-widest">Register New Hospital</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Add a hospital node to the emergency dispatch network</p>
                         </div>
-                    </form>
+                        <form onSubmit={handleAddHospital} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hospital Name</label>
+                                <input
+                                    value={newHospital.name}
+                                    onChange={(e) => handleNewHospitalChange('name', e.target.value)}
+                                    placeholder="e.g. City General Hospital"
+                                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Contact (Phone / Email)</label>
+                                <input
+                                    value={newHospital.contact}
+                                    onChange={(e) => handleNewHospitalChange('contact', e.target.value)}
+                                    placeholder="e.g. +94 11 234 5678"
+                                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1 md:col-span-2">
+                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Address</label>
+                                <input
+                                    value={newHospital.address}
+                                    onChange={(e) => handleNewHospitalChange('address', e.target.value)}
+                                    placeholder="e.g. 25 Kynsey Road, Colombo 08"
+                                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Latitude</label>
+                                <input
+                                    value={newHospital.lat}
+                                    onChange={(e) => handleNewHospitalChange('lat', e.target.value)}
+                                    placeholder="e.g. 6.92714"
+                                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Longitude</label>
+                                <input
+                                    value={newHospital.lng}
+                                    onChange={(e) => handleNewHospitalChange('lng', e.target.value)}
+                                    placeholder="e.g. 79.86120"
+                                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all"
+                                />
+                            </div>
+                            <div className="flex items-center gap-3 md:col-span-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={handleFetchLocation}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm shadow-teal-500/20"
+                                >
+                                    <MapPin size={14} /> Use Current Location
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm shadow-emerald-500/20"
+                                >
+                                    Add Hospital
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewHospital({ name: '', address: '', contact: '', lat: '', lng: '' })}
+                                    className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                    <div>
-                        <h4 className="text-sm font-bold mb-2">Saved Hospitals (MongoDB)</h4>
+                    {/* Hospital List */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-widest">Registered Hospitals</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{hospitals.length} node{hospitals.length !== 1 ? 's' : ''} in dispatch network</p>
+                            </div>
+                        </div>
                         {hospitals.length === 0 ? (
-                            <p className="text-slate-500 italic">No hospitals saved in database.</p>
+                            <div className="flex flex-col items-center justify-center py-14 gap-3 text-slate-400">
+                                <MapPin size={32} className="opacity-30" />
+                                <p className="text-sm font-medium italic">No hospitals registered in the network.</p>
+                            </div>
                         ) : (
                             <ul className="space-y-3">
                                 {hospitals.map(h => (
                                     <li key={h._id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold text-lg">
+                                            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center font-bold text-lg shrink-0">
                                                 🏥
                                             </div>
                                             <div>
@@ -247,12 +319,14 @@ const EmergencyMonitoring = () => {
                                                         <Phone size={10} className="text-teal-500" /> {h.contact || 'No Contact Listed'}
                                                     </div>
                                                 </div>
-                                                <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-tighter">Node: {h.lat.toFixed ? h.lat.toFixed(5) : h.lat}, {h.lng.toFixed ? h.lng.toFixed(5) : h.lng}</div>
+                                                <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-tighter">
+                                                    Node: {h.lat?.toFixed ? h.lat.toFixed(5) : h.lat}, {h.lng?.toFixed ? h.lng.toFixed(5) : h.lng}
+                                                </div>
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => handleRemoveHospital(h._id)}
-                                            className="px-4 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/30 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                                            className="px-4 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/30 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95 shrink-0"
                                         >
                                             Decommission
                                         </button>
