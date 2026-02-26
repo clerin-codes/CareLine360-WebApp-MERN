@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   Clock,
@@ -9,6 +10,17 @@ import {
   Star,
   Search,
   X,
+  MessageSquare,
+  ClipboardList,
+  Pill,
+  CalendarDays,
+  User,
+  Activity,
+  Mail,
+  Phone,
+  TrendingUp,
+  TrendingDown,
+  PieChart,
 } from "lucide-react";
 import {
   getDoctorDashboard,
@@ -29,9 +41,30 @@ import PatientRecordsModal from "../../components/dashboard/PatientRecordsModal"
 import PrescriptionModal from "../../components/dashboard/PrescriptionModal";
 import AvailabilityCalendar from "../../components/dashboard/AvailabilityCalendar";
 import ChatWidget from "../../components/dashboard/ChatWidget";
+import AnalyticsDonutChart from "../../components/dashboard/AnalyticsDonutChart";
+import AnalyticsBarChart from "../../components/dashboard/AnalyticsBarChart";
 import { useDoctorContext } from "../../components/layout/DashboardLayout";
 import { useToast } from "../../components/ui/Toast";
 import { getInitials } from "../../utils/colors";
+
+// ── Framer-motion animation presets ──────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.92 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
 
 // ── Custom styled status dropdown ────────────────────────────────────────────
 const STATUS_OPTS = [
@@ -548,7 +581,9 @@ export default function DashboardPage({
     total: 0,
   });
   const [patients, setPatients] = useState([]);
-  const [patientSearch, setPatientSearch] = useState("");
+  const [patientSearch, setPatientSearch] = useState(""); // input value
+  const [patientSearchQuery, setPatientSearchQuery] = useState(""); // committed query
+  const [patientPage, setPatientPage] = useState(1);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientPagination, setPatientPagination] = useState({
     page: 1,
@@ -559,6 +594,7 @@ export default function DashboardPage({
   const [recordModal, setRecordModal] = useState(null);
   const [prescripModal, setPrescripModal] = useState(null);
   const [patientRecordsModal, setPatientRecordsModal] = useState(null); // { patientId, patientName }
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null); // appointmentId pending delete
   // searchOpen / onSearchClose come from DashboardLayout via cloneElement
 
   // ── Initial load ──────────────────────────────────────────────────────────
@@ -590,40 +626,39 @@ export default function DashboardPage({
   }, [quickAction, setSection, onQuickActionHandled]);
 
   const buildSlotUtilisation = (slots) => {
-    const colorKeys = [
-      "teal",
-      "cyan",
-      "violet",
-      "rose",
-      "amber",
-      "emerald",
-      "blue",
+    const colorKeys = ["teal", "cyan", "violet", "rose"];
+
+    // Group slots by week-of-month (Week 1 = days 1-7, Week 2 = 8-14, etc.)
+    const weeks = [
+      { label: "Week 1", minDay: 1, maxDay: 7 },
+      { label: "Week 2", minDay: 8, maxDay: 14 },
+      { label: "Week 3", minDay: 15, maxDay: 21 },
+      { label: "Week 4", minDay: 22, maxDay: 31 },
     ];
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const byDay = dayNames
-      .map((label, idx) => {
-        const daySlots = slots.filter(
-          (s) => new Date(s.date + "T00:00:00").getDay() === idx,
-        );
-        const total = daySlots.length;
-        const booked = daySlots.filter((s) => s.isBooked).length;
+
+    const byWeek = weeks
+      .map((w, idx) => {
+        const weekSlots = slots.filter((s) => {
+          const day = new Date(s.date + "T00:00:00").getDate();
+          return day >= w.minDay && day <= w.maxDay;
+        });
+        const total = weekSlots.length;
+        const booked = weekSlots.filter((s) => s.isBooked).length;
         return {
-          label,
+          label: w.label,
           pct: total > 0 ? Math.round((booked / total) * 100) : 0,
           colorKey: colorKeys[idx % colorKeys.length],
+          total,
         };
       })
-      .filter((d) =>
-        slots.some(
-          (s) =>
-            new Date(s.date + "T00:00:00").getDay() ===
-            dayNames.indexOf(d.label),
-        ),
-      );
+      // Only show weeks that actually have slots
+      .filter((w) => w.total > 0)
+      .map(({ total: _t, ...rest }) => rest);
+
     const total = slots.length;
     const booked = slots.filter((s) => s.isBooked).length;
     setSlotsData({
-      data: byDay,
+      data: byWeek,
       summary: { total, booked, free: total - booked },
     });
   };
@@ -654,29 +689,42 @@ export default function DashboardPage({
   }, [section, loadAppointments]);
 
   // ── Patients ─────────────────────────────────────────────────────────────
-  const loadPatients = useCallback(
-    async (page = 1) => {
-      setPatientLoading(true);
-      try {
-        const { data } = await getDoctorPatients({
-          page,
-          limit: 10,
-          search: patientSearch,
-        });
-        setPatients(data.patients || []);
-        setPatientPagination(data.pagination || { page, pages: 1, total: 0 });
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setPatientLoading(false);
-      }
-    },
-    [patientSearch],
-  );
-
+  // Declarative: runs whenever section, page, or committed search query changes.
+  // patientSearch is only the input value (updated on every keystroke);
+  // patientSearchQuery is committed when the user clicks Search or presses Enter.
   useEffect(() => {
-    if (section === "My Patients") loadPatients(1);
-  }, [section, loadPatients]);
+    if (section !== "My Patients") return;
+    let cancelled = false;
+    setPatientLoading(true);
+    getDoctorPatients({
+      page: patientPage,
+      limit: 6,
+      search: patientSearchQuery,
+    })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setPatients(data.patients || []);
+        setPatientPagination(
+          data.pagination || { page: patientPage, pages: 1, total: 0 },
+        );
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setPatientLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, patientPage, patientSearchQuery]);
+
+  // Commit search: reset to page 1 and run the query
+  const commitPatientSearch = useCallback(() => {
+    setPatientSearchQuery(patientSearch);
+    setPatientPage(1);
+  }, [patientSearch]);
+
+  // Keep a stable helper so JSX can trigger page changes
+  const loadPatients = useCallback((page = 1) => setPatientPage(page), []);
 
   // ── Analytics — fetch from dashboard endpoint (same data, reliable) ───────
   useEffect(() => {
@@ -732,8 +780,6 @@ export default function DashboardPage({
 
   // ── Delete appointment ─────────────────────────────────────────────
   const handleDeleteAppointment = async (appointmentId) => {
-    if (!window.confirm("Delete this appointment? This cannot be undone."))
-      return;
     try {
       await deleteAppointment(appointmentId);
       toast("Appointment deleted", "success");
@@ -830,20 +876,37 @@ export default function DashboardPage({
           <div className="space-y-6">
             {/* Welcome banner */}
             {doctor && (
-              <div className="welcome-banner rounded-2xl px-6 py-5 flex items-center justify-between">
+              <motion.div
+                initial={{ opacity: 0, y: -16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="welcome-banner rounded-2xl px-6 py-5 flex items-center justify-between"
+              >
                 <div className="flex items-center gap-4">
                   {doctor.avatarUrl ? (
-                    <img
+                    <motion.img
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.15, duration: 0.4 }}
                       src={doctor.avatarUrl}
                       alt=""
                       className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/30"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-bold text-xl">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.15, duration: 0.4 }}
+                      className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-bold text-xl"
+                    >
                       {getInitials(doctor.fullName)}
-                    </div>
+                    </motion.div>
                   )}
-                  <div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2, duration: 0.4 }}
+                  >
                     <p className="text-white font-bold text-lg leading-tight">
                       Dr. {doctor.fullName}
                     </p>
@@ -855,82 +918,119 @@ export default function DashboardPage({
                         {doctor.doctorId}
                       </p>
                     )}
-                  </div>
+                  </motion.div>
                 </div>
                 {Number(doctor.rating) > 0 && (
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5 text-white font-bold text-sm flex items-center gap-2">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      delay: 0.3,
+                      duration: 0.4,
+                      type: "spring",
+                      stiffness: 200,
+                    }}
+                    className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5 text-white font-bold text-sm flex items-center gap-2"
+                  >
                     <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
                     {Number(doctor.rating).toFixed(1)} / 5
-                  </div>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-              <StatCard
-                icon={Calendar}
-                label="Today's Appointments"
-                value={dashData?.stats?.todayAppointments}
-                colorKey="teal"
-                loading={dashLoading}
-              />
-              <StatCard
-                icon={Clock}
-                label="Pending"
-                value={dashData?.stats?.pendingAppointments}
-                colorKey="amber"
-                loading={dashLoading}
-              />
-              <StatCard
-                icon={CheckCircle}
-                label="Completed"
-                value={dashData?.stats?.completedAppointments}
-                colorKey="emerald"
-                loading={dashLoading}
-              />
-              <StatCard
-                icon={Users}
-                label="Total Patients"
-                value={dashData?.stats?.totalPatients}
-                colorKey="violet"
-                loading={dashLoading}
-              />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                {
+                  icon: Calendar,
+                  label: "Today's Appointments",
+                  value: dashData?.stats?.todayAppointments,
+                  colorKey: "teal",
+                },
+                {
+                  icon: Clock,
+                  label: "Pending",
+                  value: dashData?.stats?.pendingAppointments,
+                  colorKey: "amber",
+                },
+                {
+                  icon: CheckCircle,
+                  label: "Completed",
+                  value: dashData?.stats?.completedAppointments,
+                  colorKey: "emerald",
+                },
+                {
+                  icon: Users,
+                  label: "Total Patients",
+                  value: dashData?.stats?.totalPatients,
+                  colorKey: "violet",
+                },
+              ].map((card, i) => (
+                <motion.div
+                  key={card.label}
+                  custom={i}
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <StatCard
+                    icon={card.icon}
+                    label={card.label}
+                    value={card.value}
+                    colorKey={card.colorKey}
+                    loading={dashLoading}
+                  />
+                </motion.div>
+              ))}
             </div>
 
             {/* Today's appointments table */}
-            <AppointmentsTable
-              appointments={todayAppts}
-              loading={todayLoading}
-              onConfirm={(id) => handleStatusChange(id, "confirmed")}
-              onCancel={(id) => handleStatusChange(id, "cancelled")}
-              onDelete={handleDeleteAppointment}
-              onAddRecord={(a) =>
-                setRecordModal({
-                  patientId: a.patientProfile?._id,
-                  appointmentId: a._id,
-                })
-              }
-              onPrescription={(a) =>
-                setPrescripModal({
-                  patientId: a.patientProfile?._id,
-                  appointmentId: a._id,
-                  patientName: a.patientProfile?.fullName,
-                })
-              }
-              onChat={(a) => setChatAppt(a)}
-              onComplete={(id) => handleStatusChange(id, "completed")}
-              onViewRecords={(a) =>
-                setPatientRecordsModal({
-                  patientId: a.patientProfile?._id,
-                  patientName: a.patientProfile?.fullName,
-                })
-              }
-              onViewAll={() => setSection("Appointments")}
-            />
+            <motion.div
+              variants={fadeUp}
+              custom={1}
+              initial="hidden"
+              animate="visible"
+            >
+              <AppointmentsTable
+                appointments={todayAppts}
+                loading={todayLoading}
+                onConfirm={(id) => handleStatusChange(id, "confirmed")}
+                onCancel={(id) => handleStatusChange(id, "cancelled")}
+                onDelete={handleDeleteAppointment}
+                onAddRecord={(a) =>
+                  setRecordModal({
+                    patientId: a.patientProfile?._id,
+                    appointmentId: a._id,
+                  })
+                }
+                onPrescription={(a) =>
+                  setPrescripModal({
+                    patientId: a.patientProfile?._id,
+                    appointmentId: a._id,
+                    patientName: a.patientProfile?.fullName,
+                  })
+                }
+                onChat={(a) => setChatAppt(a)}
+                onComplete={(id) => handleStatusChange(id, "completed")}
+                onViewRecords={(a) =>
+                  setPatientRecordsModal({
+                    patientId: a.patientProfile?._id,
+                    patientName: a.patientProfile?.fullName,
+                  })
+                }
+                onViewAll={() => setSection("Appointments")}
+              />
+            </motion.div>
 
             {/* Activity + Slot Utilisation */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <motion.div
+              variants={fadeUp}
+              custom={2}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+            >
               <ActivityFeed
                 activities={buildActivities()}
                 loading={todayLoading}
@@ -940,10 +1040,15 @@ export default function DashboardPage({
                 data={slotsData?.data || []}
                 summary={slotsData?.summary || null}
               />
-            </div>
+            </motion.div>
 
             {/* Performance Overview strip */}
-            <div>
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              initial="hidden"
+              animate="visible"
+            >
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                   Performance Overview
@@ -959,11 +1064,9 @@ export default function DashboardPage({
                 data={buildAnalyticsStrip(dashData)}
                 loading={dashLoading}
               />
-            </div>
+            </motion.div>
           </div>
         )}
-
-        {/* ── APPOINTMENTS ────────────────────────────────────────────────── */}
         {section === "Appointments" && (
           <div className="space-y-4">
             {/* Filter bar card — z-[100] ensures the StatusDropdown floats above the
@@ -1158,103 +1261,359 @@ export default function DashboardPage({
 
         {/* ── MY PATIENTS ──────────────────────────────────────────────────── */}
         {section === "My Patients" && (
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search patient name or ID…"
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && loadPatients(1)}
-                  className="w-full h-10 pl-9 pr-3 rounded-xl text-sm border border-gray-200 dark:border-white/10
-                    bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                    focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
+          <div className="space-y-5">
+            {/* Header + search */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  My Patients
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {patientPagination.total} patient
+                  {patientPagination.total !== 1 ? "s" : ""} under your care
+                </p>
               </div>
-              <button
-                onClick={() => loadPatients(1)}
-                className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
-              >
-                Search
-              </button>
+              <div className="flex gap-2 sm:ml-auto">
+                <div className="relative flex-1 sm:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search name or ID…"
+                    value={patientSearch}
+                    onChange={(e) => setPatientSearch(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && commitPatientSearch()
+                    }
+                    className="w-full h-10 pl-9 pr-3 rounded-xl text-sm glass-input
+                      text-gray-700 dark:text-gray-300
+                      focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <button
+                  onClick={commitPatientSearch}
+                  className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors shrink-0"
+                >
+                  Search
+                </button>
+              </div>
             </div>
 
-            <div className="glass-card rounded-2xl overflow-hidden">
-              {patientLoading ? (
-                <div className="p-8 flex justify-center">
-                  <span className="w-7 h-7 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+            {/* Cards grid */}
+            {patientLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="glass-card rounded-2xl p-5 animate-pulse"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-14 w-14 rounded-full bg-gray-200 dark:bg-white/10" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 rounded bg-gray-200 dark:bg-white/10 w-3/4" />
+                        <div className="h-2.5 rounded bg-gray-200 dark:bg-white/10 w-1/2" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="h-12 rounded-xl bg-gray-200 dark:bg-white/10" />
+                      <div className="h-12 rounded-xl bg-gray-200 dark:bg-white/10" />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 h-9 rounded-xl bg-gray-200 dark:bg-white/10" />
+                      <div className="flex-1 h-9 rounded-xl bg-gray-200 dark:bg-white/10" />
+                      <div className="flex-1 h-9 rounded-xl bg-gray-200 dark:bg-white/10" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : patients.length === 0 ? (
+              <div className="glass-card rounded-2xl p-16 flex flex-col items-center gap-3">
+                <div className="h-16 w-16 rounded-full bg-teal-500/10 flex items-center justify-center">
+                  <Users className="h-8 w-8 text-teal-500" />
                 </div>
-              ) : patients.length === 0 ? (
-                <p className="p-8 text-center text-sm text-gray-400">
+                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
                   No patients found.
                 </p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-white/10 text-left">
-                      {["Patient", "ID", "Appointments", "Last Visit"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="px-6 py-4 text-[10px] font-semibold uppercase tracking-widest text-gray-500"
-                          >
-                            {h}
-                          </th>
-                        ),
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patients.map((p) => (
-                      <tr
-                        key={p._id}
-                        className="border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                          {p.fullName || "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs">
-                          {p.patientId || "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                          {p.appointmentCount ?? "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs">
-                          {p.lastVisit
-                            ? new Date(p.lastVisit).toLocaleDateString("en-GB")
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {patientPagination.pages > 1 && (
-              <div className="flex items-center justify-between px-2">
-                <p className="text-xs text-gray-500">
-                  Total: {patientPagination.total}
+                <p className="text-gray-400 dark:text-gray-500 text-xs">
+                  Patients appear here once they've booked an appointment with
+                  you.
                 </p>
-                <div className="flex gap-1 items-center">
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+                {patients.map((p, idx) => {
+                  const name =
+                    p.fullName || p.userId?.email || "Unknown Patient";
+                  const initials =
+                    name
+                      .split(" ")
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((w) => w[0].toUpperCase())
+                      .join("") || "?";
+                  const email = p.userId?.email || "";
+                  const phone = p.userId?.phone || "";
+                  // Unique key — fall back to userId when no Patient profile exists
+                  const cardKey =
+                    p._id?.toString() ||
+                    p.userId?._id?.toString() ||
+                    String(idx);
+
+                  return (
+                    <div
+                      key={cardKey}
+                      className="glass-card rounded-2xl p-5 flex flex-col gap-4
+                        hover:shadow-xl hover:shadow-teal-500/15 hover:-translate-y-1 hover:scale-[1.01]
+                        transition-all duration-300 group patient-card"
+                    >
+                      {/* Avatar + Name */}
+                      <div className="flex items-center gap-3">
+                        {p.avatarUrl ? (
+                          <img
+                            src={p.avatarUrl}
+                            alt={name}
+                            className="h-14 w-14 rounded-full object-cover ring-2 ring-teal-400/30 shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="h-14 w-14 rounded-full bg-gradient-to-br from-teal-400 to-cyan-600
+                            flex items-center justify-center text-white text-lg font-bold
+                            ring-2 ring-teal-400/20 shrink-0"
+                          >
+                            {initials}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight truncate">
+                            {name}
+                          </p>
+                          {p.patientId && (
+                            <span
+                              className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold
+                              bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                            >
+                              {p.patientId}
+                            </span>
+                          )}
+                          {email && (
+                            <p className="text-[11px] text-gray-400 truncate mt-0.5 flex items-center gap-1">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              {email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-black/5 dark:bg-white/5 px-3 py-2.5">
+                          <div className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400 mb-0.5">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wide">
+                              Appointments
+                            </span>
+                          </div>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {p.appointmentCount ?? 0}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-black/5 dark:bg-white/5 px-3 py-2.5">
+                          <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400 mb-0.5">
+                            <Activity className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wide">
+                              Last Visit
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {p.lastVisit
+                              ? new Date(p.lastVisit).toLocaleDateString(
+                                  "en-GB",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-white/10">
+                        {/* Past Records */}
+                        <button
+                          onClick={() =>
+                            setPatientRecordsModal({
+                              patientId: p._id,
+                              patientName: name,
+                            })
+                          }
+                          disabled={!p._id}
+                          title={
+                            p._id
+                              ? "Past Medical Records"
+                              : "No patient profile"
+                          }
+                          className="group/btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
+                            text-[11px] font-semibold
+                            bg-amber-500/10 text-amber-600 dark:text-amber-400
+                            hover:bg-amber-500/25 hover:shadow-md hover:shadow-amber-500/20
+                            transition-all duration-200 active:scale-95
+                            disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <ClipboardList className="h-4 w-4" />
+                          <span>Records</span>
+                        </button>
+
+                        {/* Chat */}
+                        <button
+                          onClick={() => {
+                            const apptId =
+                              p.lastAppointmentId?._id || p.lastAppointmentId;
+                            if (apptId) {
+                              setChatAppt({
+                                _id: apptId,
+                                patientProfile: {
+                                  fullName: name,
+                                  avatarUrl: p.avatarUrl,
+                                },
+                                date: p.lastVisit,
+                              });
+                            }
+                          }}
+                          disabled={!p.lastAppointmentId}
+                          title={
+                            p.lastAppointmentId
+                              ? "Chat with Patient"
+                              : "No appointment found"
+                          }
+                          className="group/btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
+                            text-[11px] font-semibold
+                            bg-blue-500/10 text-blue-600 dark:text-blue-400
+                            hover:bg-blue-500/25 hover:shadow-md hover:shadow-blue-500/20
+                            transition-all duration-200 active:scale-95
+                            disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          <span>Chat</span>
+                        </button>
+
+                        {/* Prescription */}
+                        <button
+                          onClick={() => {
+                            const apptId =
+                              p.lastAppointmentId?._id || p.lastAppointmentId;
+                            if (apptId) {
+                              setPrescripModal({
+                                patientId: p._id,
+                                appointmentId: apptId,
+                                patientName: name,
+                              });
+                            }
+                          }}
+                          disabled={!p.lastAppointmentId || !p._id}
+                          title={
+                            !p._id
+                              ? "No patient profile"
+                              : p.lastAppointmentId
+                                ? "Generate Prescription PDF"
+                                : "No appointment found"
+                          }
+                          className="group/btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl
+                            text-[11px] font-semibold
+                            bg-violet-500/10 text-violet-600 dark:text-violet-400
+                            hover:bg-violet-500/25 hover:shadow-md hover:shadow-violet-500/20
+                            transition-all duration-200 active:scale-95
+                            disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Pill className="h-4 w-4" />
+                          <span>Prescription PDF</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {patientPagination.total > 0 && (
+              <div className="flex items-center justify-between px-1 pt-3 border-t border-gray-200 dark:border-white/10">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {(patientPagination.page - 1) *
+                      (patientPagination.limit || 6) +
+                      1}
+                  </span>
+                  {" – "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {Math.min(
+                      patientPagination.page * (patientPagination.limit || 6),
+                      patientPagination.total,
+                    )}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {patientPagination.total}
+                  </span>{" "}
+                  patients
+                </p>
+                <div className="flex items-center gap-1">
                   <button
                     disabled={patientPagination.page <= 1}
-                    onClick={() => loadPatients(patientPagination.page - 1)}
-                    className="px-2.5 py-1 rounded-lg text-xs glass-btn text-gray-600 dark:text-gray-300 disabled:opacity-40"
+                    onClick={() => setPatientPage((p) => p - 1)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium
+                      glass-btn text-gray-600 dark:text-gray-300
+                      disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    ←
+                    ← Prev
                   </button>
-                  <span className="px-3 py-1 text-xs text-gray-500">
-                    {patientPagination.page} / {patientPagination.pages}
-                  </span>
+                  {Array.from(
+                    { length: patientPagination.pages },
+                    (_, i) => i + 1,
+                  )
+                    .filter((p) => {
+                      const cur = patientPagination.page;
+                      const last = patientPagination.pages;
+                      return p === 1 || p === last || Math.abs(p - cur) <= 1;
+                    })
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, idx) =>
+                      p === "…" ? (
+                        <span
+                          key={`el-${idx}`}
+                          className="px-1 text-xs text-gray-400 select-none"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPatientPage(p)}
+                          className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all
+                            ${
+                              p === patientPagination.page
+                                ? "bg-teal-600 text-white shadow-sm"
+                                : "glass-btn text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400"
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      ),
+                    )}
                   <button
                     disabled={patientPagination.page >= patientPagination.pages}
-                    onClick={() => loadPatients(patientPagination.page + 1)}
-                    className="px-2.5 py-1 rounded-lg text-xs glass-btn text-gray-600 dark:text-gray-300 disabled:opacity-40"
+                    onClick={() => setPatientPage((p) => p + 1)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium
+                      glass-btn text-gray-600 dark:text-gray-300
+                      disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    →
+                    Next →
                   </button>
                 </div>
               </div>
@@ -1268,52 +1627,306 @@ export default function DashboardPage({
         {/* ── ANALYTICS ───────────────────────────────────────────────────── */}
         {section === "Analytics" && (
           <div className="space-y-6">
-            {/* Stat cards — use analyticsData if loaded, fall back to dashData */}
+            {/* Header */}
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Analytics
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Your practice performance at a glance
+              </p>
+            </motion.div>
+
+            {/* Stat cards — analyticsData now has correct stats.* from the fixed backend */}
             {(() => {
               const src = analyticsData || dashData;
               const stats = src?.stats || {};
               const docInfo = src?.doctor || {};
               const rating = Number(docInfo?.rating || doctor?.rating || 0);
+              const isLoading = analyticsLoading && !dashData;
+              const statCards = [
+                {
+                  icon: Calendar,
+                  label: "Total Appointments",
+                  value: stats.totalAppointments,
+                  colorKey: "teal",
+                },
+                {
+                  icon: CheckCircle,
+                  label: "Completed",
+                  value: stats.completedAppointments,
+                  colorKey: "emerald",
+                },
+                {
+                  icon: Users,
+                  label: "Total Patients",
+                  value: stats.totalPatients,
+                  colorKey: "violet",
+                },
+                {
+                  icon: Star,
+                  label: "Avg Rating",
+                  value:
+                    rating > 0 ? `${rating.toFixed(1)} / 5` : "No ratings yet",
+                  colorKey: "amber",
+                },
+              ];
               return (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-                  <StatCard
-                    icon={Calendar}
-                    label="Total Appointments"
-                    value={stats.totalAppointments}
-                    colorKey="teal"
-                    loading={analyticsLoading && !dashData}
-                  />
-                  <StatCard
-                    icon={CheckCircle}
-                    label="Completed"
-                    value={stats.completedAppointments}
-                    colorKey="emerald"
-                    loading={analyticsLoading && !dashData}
-                  />
-                  <StatCard
-                    icon={Users}
-                    label="Total Patients"
-                    value={stats.totalPatients}
-                    colorKey="violet"
-                    loading={analyticsLoading && !dashData}
-                  />
-                  <StatCard
-                    icon={BarChart2}
-                    label="Avg Rating"
-                    value={
-                      rating > 0 ? `${rating.toFixed(1)} / 5` : "No ratings yet"
-                    }
-                    colorKey="amber"
-                    loading={analyticsLoading && !dashData}
-                  />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {statCards.map((card, i) => (
+                    <motion.div
+                      key={card.label}
+                      custom={i}
+                      variants={scaleIn}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <StatCard
+                        icon={card.icon}
+                        label={card.label}
+                        value={card.value}
+                        colorKey={card.colorKey}
+                        loading={isLoading}
+                      />
+                    </motion.div>
+                  ))}
                 </div>
               );
             })()}
 
-            <AnalyticsStrip
-              data={buildAnalyticsStrip(analyticsData || dashData)}
-              loading={analyticsLoading && !dashData}
-            />
+            {/* Charts row */}
+            {(() => {
+              const src = analyticsData;
+              const byStatus = src?.appointmentsByStatus || [];
+              const monthlyTrend = src?.monthlyTrend || [];
+              const stats = src?.stats || dashData?.stats || {};
+              const thisMonth = src?.thisMonthAppointments ?? 0;
+              const lastMonth = src?.lastMonthAppointments ?? 0;
+              const monthDiff = thisMonth - lastMonth;
+
+              // Build donut data from appointmentsByStatus
+              const STATUS_COLORS = {
+                completed: "#10b981",
+                pending: "#f59e0b",
+                confirmed: "#3b82f6",
+                cancelled: "#ef4444",
+              };
+              const donutData = byStatus.map((s) => ({
+                label: s._id.charAt(0).toUpperCase() + s._id.slice(1),
+                value: s.count,
+                color: STATUS_COLORS[s._id] || "#94a3b8",
+              }));
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Donut chart — Appointment Status Breakdown */}
+                  <motion.div
+                    variants={fadeUp}
+                    custom={0}
+                    initial="hidden"
+                    animate="visible"
+                    className="glass-card rounded-2xl p-6"
+                  >
+                    <div className="flex items-center gap-2 mb-5">
+                      <PieChart className="h-4 w-4 text-teal-500" />
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Appointment Status Breakdown
+                      </h3>
+                    </div>
+
+                    {analyticsLoading && !analyticsData ? (
+                      <div className="flex justify-center py-10">
+                        <div className="w-32 h-32 rounded-full border-4 border-gray-100 dark:border-white/5 border-t-teal-500 animate-spin" />
+                      </div>
+                    ) : donutData.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        No appointment data yet.
+                      </p>
+                    ) : (
+                      <div className="flex justify-center">
+                        <AnalyticsDonutChart
+                          data={donutData}
+                          size={200}
+                          thickness={34}
+                          title="Appointments"
+                          total={
+                            stats.totalAppointments ??
+                            donutData.reduce((a, b) => a + b.value, 0)
+                          }
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {/* Bar chart — Monthly Trend */}
+                  <motion.div
+                    variants={fadeUp}
+                    custom={1}
+                    initial="hidden"
+                    animate="visible"
+                    className="glass-card rounded-2xl p-6"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <BarChart2 className="h-4 w-4 text-teal-500" />
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                          Monthly Appointment Trend
+                        </h3>
+                      </div>
+                      {/* Month-over-month badge */}
+                      {(thisMonth > 0 || lastMonth > 0) && (
+                        <span
+                          className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            monthDiff > 0
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                              : monthDiff < 0
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                                : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+                          }`}
+                        >
+                          {monthDiff > 0 ? (
+                            <TrendingUp className="h-3 w-3" />
+                          ) : monthDiff < 0 ? (
+                            <TrendingDown className="h-3 w-3" />
+                          ) : null}
+                          {monthDiff > 0 ? "+" : ""}
+                          {monthDiff} vs last month
+                        </span>
+                      )}
+                    </div>
+
+                    {analyticsLoading && !analyticsData ? (
+                      <div className="flex items-end gap-2 h-36 px-1 mt-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 rounded-t-lg animate-pulse bg-gray-200 dark:bg-white/10"
+                            style={{ height: `${40 + Math.random() * 60}%` }}
+                          />
+                        ))}
+                      </div>
+                    ) : monthlyTrend.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        No trend data yet.
+                      </p>
+                    ) : (
+                      <div className="mt-4">
+                        <AnalyticsBarChart
+                          data={monthlyTrend}
+                          color="#0d9488"
+                          height={150}
+                          label="Appointments per month"
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+                </div>
+              );
+            })()}
+
+            {/* Completion rate + extra KPI pills */}
+            {(() => {
+              const src = analyticsData || dashData;
+              const stats = src?.stats || {};
+              const {
+                totalAppointments = 0,
+                completedAppointments = 0,
+                cancelledAppointments = 0,
+                pendingAppointments = 0,
+              } = stats;
+              const completionRate =
+                totalAppointments > 0
+                  ? Math.round(
+                      (completedAppointments / totalAppointments) * 100,
+                    )
+                  : 0;
+              const cancellationRate =
+                totalAppointments > 0
+                  ? Math.round(
+                      (cancelledAppointments / totalAppointments) * 100,
+                    )
+                  : 0;
+
+              const kpis = [
+                {
+                  label: "Completion Rate",
+                  value: `${completionRate}%`,
+                  pct: completionRate,
+                  color: "#10b981",
+                  bg: "bg-emerald-100 dark:bg-emerald-900/20",
+                  text: "text-emerald-700 dark:text-emerald-300",
+                },
+                {
+                  label: "Cancellation Rate",
+                  value: `${cancellationRate}%`,
+                  pct: cancellationRate,
+                  color: "#ef4444",
+                  bg: "bg-rose-100 dark:bg-rose-900/20",
+                  text: "text-rose-700 dark:text-rose-300",
+                },
+                {
+                  label: "Pending",
+                  value: pendingAppointments,
+                  pct:
+                    totalAppointments > 0
+                      ? Math.min(
+                          (pendingAppointments / totalAppointments) * 100,
+                          100,
+                        )
+                      : 0,
+                  color: "#f59e0b",
+                  bg: "bg-amber-100 dark:bg-amber-900/20",
+                  text: "text-amber-700 dark:text-amber-300",
+                },
+              ];
+
+              return (
+                <motion.div
+                  variants={fadeUp}
+                  custom={2}
+                  initial="hidden"
+                  animate="visible"
+                  className="glass-card rounded-2xl p-6"
+                >
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-5">
+                    Performance Overview
+                  </h3>
+                  <div className="space-y-4">
+                    {kpis.map((kpi, i) => (
+                      <div key={kpi.label}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            {kpi.label}
+                          </span>
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-full ${kpi.bg} ${kpi.text}`}
+                          >
+                            {kpi.value}
+                          </span>
+                        </div>
+                        <div className="relative h-2 w-full rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${kpi.pct}%` }}
+                            transition={{
+                              delay: 0.3 + i * 0.1,
+                              duration: 0.8,
+                              ease: [0.4, 0, 0.2, 1],
+                            }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: kpi.color }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })()}
           </div>
         )}
 
@@ -1353,6 +1966,63 @@ export default function DashboardPage({
             onClose={() => setPatientRecordsModal(null)}
           />
         )}
+
+        {/* ── Delete confirmation modal ─────────────────────────────── */}
+        {deleteConfirmId &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setDeleteConfirmId(null)}
+            >
+              <div
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 flex flex-col gap-5 animate-fade-in"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Icon */}
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-500/15 mx-auto">
+                  <svg
+                    className="w-7 h-7 text-rose-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </div>
+                {/* Text */}
+                <div className="text-center">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                    Delete Appointment
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    This appointment will be permanently removed. This action
+                    cannot be undone.
+                  </p>
+                </div>
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirmId(null)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteAppointment}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-lg shadow-rose-500/25"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
       </div>
     </>
   );

@@ -384,6 +384,133 @@
     animation-delay: 0.29s;
   }
 
+  /* Patient card entrance — scale + fade + shift-up */
+  .patient-card {
+    animation: patient-card-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes patient-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Pulse ring on hover for action buttons */
+  .group:hover .btn-ring {
+    animation: btn-ring-pulse 1.4s ease-out infinite;
+  }
+
+  @keyframes btn-ring-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.35);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(13, 148, 136, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+    }
+  }
+
+  /* Shimmer sweep — apply only to stat cards and analytic cards.
+     Uses overflow:clip so fixed-positioned dropdowns are never clipped. */
+  @keyframes shimmer-sweep {
+    0% {
+      transform: translateX(-100%) skewX(-15deg);
+    }
+    100% {
+      transform: translateX(300%) skewX(-15deg);
+    }
+  }
+
+  .stat-card-shimmer {
+    overflow: clip; /* clip, not hidden — does NOT trap fixed children */
+    position: relative;
+  }
+
+  .stat-card-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+    animation: shimmer-sweep 5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  html.dark .stat-card-shimmer::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Floating orb decorations inside the welcome banner */
+  @keyframes float-slow {
+    0%,
+    100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-8px) rotate(3deg);
+    }
+  }
+
+  .welcome-banner::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    animation: float-slow 7s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .welcome-banner::after {
+    content: "";
+    position: absolute;
+    bottom: -60px;
+    left: -30px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    animation: float-slow 9s ease-in-out infinite reverse;
+    pointer-events: none;
+  }
+
+  /* Slide-in from right for section transitions */
+  .animate-slide-in {
+    animation: slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   /* ══════════════════════════════
      UTILITIES
   ══════════════════════════════ */
