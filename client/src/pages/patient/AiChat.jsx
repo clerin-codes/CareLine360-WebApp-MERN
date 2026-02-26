@@ -1,4 +1,5 @@
 import {useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 import PatientNavbar from "./components/PatientNavbar";
 import AiExplainPanel from "./components/AiExplainPanel";
@@ -15,7 +16,7 @@ export default function AiChat() {
 }, []);
 
   const Spinner = ({ size = 28 }) => (
-    <div className="flex flex-col items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center py-12 min-h-[60vh] gap-4">
         <div
         className="rounded-full border-3 border-gray-200 border-t-black animate-spin"
         style={{ width: size, height: size }}
@@ -34,9 +35,14 @@ export default function AiChat() {
       {loading ? (
         <Spinner size={38} />
         ) : (
-      <div className="max-w-6xl mx-auto px-5 py-6">
+      <motion.div
+        className="max-w-6xl mx-auto px-5 py-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <AiExplainPanel />
-      </div>
+      </motion.div>
       )}
     </div>
   );

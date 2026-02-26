@@ -163,7 +163,7 @@ export default function Directory() {
   }, [doctors, q]);
 
   const Spinner = ({ size = 28 }) => (
-    <div className="flex flex-col items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center py-12 min-h-[60vh] gap-4">
         <div
         className="rounded-full border-3 border-gray-200 border-t-black animate-spin"
         style={{ width: size, height: size }}
