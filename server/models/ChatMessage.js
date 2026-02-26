@@ -5,21 +5,34 @@ const chatMessageSchema = new mongoose.Schema(
     appointmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Appointment",
-      required: true,
+      required: [true, "Appointment is required"],
       index: true,
     },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: [true, "Sender is required"],
     },
     senderRole: {
       type: String,
       enum: ["doctor", "patient"],
       required: true,
     },
-    message: { type: String, trim: true, required: true },
-    isRead: { type: Boolean, default: false },
+    message: {
+      type: String,
+      required: [true, "Message is required"],
+      trim: true,
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+    readBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -6,6 +6,9 @@ export default function Documents() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [search, setSearch] = useState("");
+
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("other");
@@ -21,9 +24,11 @@ export default function Documents() {
   const navItems = useMemo(
     () => [
       { label: "Overview", href: "/patient/dashboard" },
+      { label: "Appointments", href: "/appointments" },
       { label: "Documents", href: "/patient/documents" },
       { label: "Medical History", href: "/patient/medical-history" },
       { label: "AI Chat", href: "/patient/messages" },
+      { label: "Directory", href: "/patient/directory" },
     ],
     []
   );
@@ -56,7 +61,9 @@ export default function Documents() {
   const loadDocs = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/documents");
+      const res = await api.get("/documents", {
+        params: { category: filterCategory, q: search },
+      });
       setDocs(res.data?.documents || []);
     } catch (e) {
       setMsgType("error");
@@ -76,10 +83,13 @@ export default function Documents() {
   };
 
   useEffect(() => {
-    loadDocs();
-    loadMe();
+    const t = setTimeout(() => {
+      loadDocs();
+    }, 400);
+
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [search, filterCategory]);
 
   const upload = async () => {
     if (!file) {
@@ -140,11 +150,56 @@ export default function Documents() {
     }
   };
 
+  const handleOpen = (doc) => {
+  const url = doc.viewUrl || doc.fileUrl;
+
+  // Images
+  if (doc.mimeType?.startsWith("image/")) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // PDF
+  if (doc.mimeType === "application/pdf") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Word documents → use Google viewer
+  const isWord =
+    doc.mimeType === "application/msword" ||
+    doc.mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  if (isWord) {
+    const gview = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
+    window.open(gview, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // fallback download
+  window.open(url, "_blank");
+};
+
+const Spinner = ({ size = 28 }) => (
+    <div className="flex flex-col items-center justify-center py-12">
+        <div
+        className="rounded-full border-3 border-gray-200 border-t-black animate-spin"
+        style={{ width: size, height: size }}
+        aria-label="Loading"
+        />
+
+        <div className="text-sm text-gray-500 animate-pulse">
+        Loading data...
+      </div>
+    </div>
+  );
+
   // ✅ supports different backend field names (in case it’s not avatarUrl)
   // const avatar = me?.avatarUrl;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f6fbff] to-white bg-[url('/')] bg-cover bg-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
       {/* ✅ NAV BAR (copied style from dashboard) */}
       <div className="sticky top-0 z-10 backdrop-blur bg-white">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
@@ -321,6 +376,40 @@ export default function Documents() {
           </div>
         </div>
 
+        {/* filter and search */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="text-sm text-gray-600">Filter:</div>
+          {/* Category Filter */}
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-3 py-2 rounded-xl ring-1 ring-gray-200 bg-white text-sm"
+          >
+            <option value="all">All</option>
+            {categories.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Search */}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title or filename..."
+            className="flex-1 px-3 py-2 rounded-xl ring-1 ring-gray-200 bg-white text-sm"
+          />
+
+          {/* Clear */}
+          <button
+            onClick={() => setSearch("")}
+            className="px-3 py-2 rounded-xl bg-gray-100 text-gray-900 text-sm hover:bg-gray-200 transition"
+          >
+            Clear
+          </button>
+        </div>
+
         {/* List */}
         <div className="bg-white rounded-2xl p-6 ring-1 ring-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -334,7 +423,7 @@ export default function Documents() {
           </div>
 
           {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
+            <Spinner size={38} />
           ) : docs.length === 0 ? (
             <div className="text-sm text-gray-500">No documents uploaded yet.</div>
           ) : (
@@ -354,14 +443,12 @@ export default function Documents() {
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <a
-                      href={d.viewUrl || d.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      onClick={() => handleOpen(d)}
                       className="px-3 py-2 rounded-xl bg-blue-600 text-white text-sm hover:opacity-95 transition"
                     >
                       Open
-                    </a>
+                    </button>
 
                     <button
                       onClick={() => remove(d._id)}

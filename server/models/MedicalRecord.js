@@ -2,33 +2,50 @@ const mongoose = require("mongoose");
 
 const medicalRecordSchema = new mongoose.Schema(
   {
-    appointmentId: {
+    patientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Appointment",
-      default: null,
+      ref: "Patient",
+      required: true,
+      index: true,
     },
     doctorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Doctor",
       required: true,
     },
-    patientId: {
+    appointmentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Patient",
-      required: true,
+      ref: "Appointment",
+      default: null,
+    },
+
+    // Visit Info
+    visitDate: {
+      type: Date,
+      default: Date.now, // safe default — won't break doctor-module code that omits this field
+    },
+    visitType: {
+      type: String,
+      enum: ["consultation", "follow-up", "emergency"],
+      default: "consultation",
     },
 
     // Diagnosis
     chiefComplaint: { type: String, trim: true, default: "" },
+    symptoms: [String],
     diagnosis: { type: String, trim: true, default: "" },
+    secondaryDiagnosis: [String],
+    icdCode: { type: String, trim: true },
     notes: { type: String, trim: true, default: "" },
+    treatmentPlan: { type: String, trim: true },
+    followUpDate: Date,
 
     // Vitals
     vitals: {
       bloodPressure: { type: String, default: "" }, // "120/80"
       heartRate: { type: Number, default: null },
       temperature: { type: Number, default: null }, // Celsius
-      oxygenSaturation: { type: Number, default: null }, // %
+      oxygenSaturation: { type: Number, default: null }, // % (unified name)
       weight: { type: Number, default: null },
       height: { type: Number, default: null },
     },
@@ -43,6 +60,12 @@ const medicalRecordSchema = new mongoose.Schema(
         instructions: { type: String, trim: true },
       },
     ],
+    // Reference to standalone Prescription document
+    prescriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Prescription",
+      default: null,
+    },
 
     // Uploaded PDFs/scans (Cloudinary)
     attachments: [
@@ -58,5 +81,8 @@ const medicalRecordSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index for efficient patient history queries sorted by most recent
+medicalRecordSchema.index({ patientId: 1, visitDate: -1 });
 
 module.exports = mongoose.model("MedicalRecord", medicalRecordSchema);
