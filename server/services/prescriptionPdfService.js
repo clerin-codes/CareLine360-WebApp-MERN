@@ -33,7 +33,11 @@ const generateAndUploadPrescriptionPdf = ({
         },
         (error, result) => {
           if (error) return reject(error);
-          resolve({ fileUrl: result.secure_url, publicId: result.public_id });
+          resolve({
+            fileUrl: result.secure_url,
+            publicId: result.public_id,
+            pdfBuffer,
+          });
         },
       );
 

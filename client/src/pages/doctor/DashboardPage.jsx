@@ -635,7 +635,7 @@ export default function DashboardPage({
       try {
         const { data } = await getDoctorAppointments({
           page,
-          limit: 10,
+          limit: 5,
           ...apptFilter,
         });
         setAllAppts(data.appointments || []);
@@ -919,6 +919,7 @@ export default function DashboardPage({
                 })
               }
               onChat={(a) => setChatAppt(a)}
+              onComplete={(id) => handleStatusChange(id, "completed")}
               onViewRecords={(a) =>
                 setPatientRecordsModal({
                   patientId: a.patientProfile?._id,
@@ -1059,36 +1060,95 @@ export default function DashboardPage({
                 })
               }
               onChat={(a) => setChatAppt(a)}
+              onComplete={(id) => handleStatusChange(id, "completed")}
               onViewRecords={(a) =>
                 setPatientRecordsModal({
                   patientId: a.patientProfile?._id,
                   patientName: a.patientProfile?.fullName,
                 })
               }
+              title="Appointments List"
+              showDate
             />
 
-            {apptPagination.pages > 1 && (
-              <div className="flex items-center justify-between px-2 pt-2">
-                <p className="text-xs text-gray-500">
-                  Total: {apptPagination.total}
+            {/* Pagination */}
+            {apptPagination.total > 0 && (
+              <div className="flex items-center justify-between px-1 pt-3 border-t border-gray-200 dark:border-white/10 mt-2">
+                {/* Showing X – Y of Z */}
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {(apptPagination.page - 1) * 5 + 1}
+                  </span>
+                  {" – "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {Math.min(apptPagination.page * 5, apptPagination.total)}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {apptPagination.total}
+                  </span>{" "}
+                  appointments
                 </p>
-                <div className="flex gap-1 items-center">
+
+                {/* Prev / page numbers / Next */}
+                <div className="flex items-center gap-1">
+                  {/* Prev */}
                   <button
                     disabled={apptPagination.page <= 1}
                     onClick={() => loadAppointments(apptPagination.page - 1)}
-                    className="px-2.5 py-1 rounded-lg text-xs glass-btn text-gray-600 dark:text-gray-300 disabled:opacity-40"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium
+                      glass-btn text-gray-600 dark:text-gray-300
+                      disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    ←
+                    ← Prev
                   </button>
-                  <span className="px-3 py-1 text-xs text-gray-500">
-                    {apptPagination.page} / {apptPagination.pages}
-                  </span>
+
+                  {/* Page number pills */}
+                  {Array.from({ length: apptPagination.pages }, (_, i) => i + 1)
+                    .filter((p) => {
+                      const cur = apptPagination.page;
+                      const last = apptPagination.pages;
+                      return p === 1 || p === last || Math.abs(p - cur) <= 1;
+                    })
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, idx) =>
+                      p === "…" ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="px-1 text-xs text-gray-400 select-none"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => loadAppointments(p)}
+                          className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all
+                            ${
+                              p === apptPagination.page
+                                ? "bg-teal-600 text-white shadow-sm"
+                                : "glass-btn text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400"
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      ),
+                    )}
+
+                  {/* Next */}
                   <button
                     disabled={apptPagination.page >= apptPagination.pages}
                     onClick={() => loadAppointments(apptPagination.page + 1)}
-                    className="px-2.5 py-1 rounded-lg text-xs glass-btn text-gray-600 dark:text-gray-300 disabled:opacity-40"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium
+                      glass-btn text-gray-600 dark:text-gray-300
+                      disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    →
+                    Next →
                   </button>
                 </div>
               </div>

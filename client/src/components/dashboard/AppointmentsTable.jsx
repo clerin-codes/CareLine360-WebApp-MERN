@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Pill,
   ClipboardList,
+  CircleCheck,
 } from "lucide-react";
 import { PRIORITY_BADGE, STATUS_BADGE, getInitials } from "../../utils/colors";
 
@@ -22,11 +23,14 @@ import { PRIORITY_BADGE, STATUS_BADGE, getInitials } from "../../utils/colors";
  *   onPrescription – (appointment) => void
  *   onChat         – (appointment) => void
  *   onViewRecords  – (appointment) => void  — view patient's past medical records
+ *   onComplete     – (appointmentId) => void  — mark appointment as completed
  *   onViewAll      – () => void
  */
 export default function AppointmentsTable({
   appointments = [],
   loading = false,
+  title = "Today's Appointments",
+  showDate = false,
   onConfirm,
   onCancel,
   onDelete,
@@ -34,13 +38,14 @@ export default function AppointmentsTable({
   onPrescription,
   onChat,
   onViewRecords,
+  onComplete,
   onViewAll,
 }) {
   return (
     <div className="glass-card rounded-2xl p-6">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-          Today's Appointments
+          {title}
         </h2>
         {onViewAll && (
           <button
@@ -79,6 +84,7 @@ export default function AppointmentsTable({
               <tr className="border-b border-gray-200 dark:border-white/10 text-left">
                 {[
                   "Patient",
+                  ...(showDate ? ["Date"] : []),
                   "Time",
                   "Type",
                   "Priority",
@@ -97,8 +103,17 @@ export default function AppointmentsTable({
             <tbody>
               {appointments.map((apt) => {
                 const patientName =
-                  apt.patientProfile?.fullName || apt.patientName || "—";
+                  apt.patientProfile?.fullName ||
+                  apt.patientName ||
+                  apt.patient?.email ||
+                  "Unknown Patient";
                 const patientId = apt.patientProfile?.patientId || "";
+                const avatarUrl = apt.patientProfile?.avatarUrl || null;
+                // Initials: first char of each word, max 2
+                const initials =
+                  getInitials(patientName) ||
+                  patientName[0]?.toUpperCase() ||
+                  "?";
 
                 return (
                   <tr
@@ -108,9 +123,18 @@ export default function AppointmentsTable({
                     {/* Patient */}
                     <td className="py-3.5 pr-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-teal-400 to-cyan-600 flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-teal-400/20">
-                          {getInitials(patientName)}
-                        </div>
+                        {/* Avatar: photo if available, else initials */}
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={patientName}
+                            className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-teal-400/20"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-teal-400 to-cyan-600 flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-teal-400/20">
+                            {initials}
+                          </div>
+                        )}
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white text-sm leading-tight">
                             {patientName}
@@ -123,6 +147,19 @@ export default function AppointmentsTable({
                         </div>
                       </div>
                     </td>
+
+                    {/* Date */}
+                    {showDate && (
+                      <td className="py-3.5 pr-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                        {apt.date
+                          ? new Date(apt.date).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </td>
+                    )}
 
                     {/* Time */}
                     <td className="py-3.5 pr-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
@@ -183,6 +220,12 @@ export default function AppointmentsTable({
                         )}
                         {apt.status === "confirmed" && (
                           <>
+                            <ActionIcon
+                              icon={<CircleCheck className="h-4.5 w-4.5" />}
+                              title="Mark as Complete"
+                              color="emerald"
+                              onClick={() => onComplete?.(apt._id)}
+                            />
                             <ActionIcon
                               icon={<FileText className="h-4.5 w-4.5" />}
                               title="Add Medical Record"
