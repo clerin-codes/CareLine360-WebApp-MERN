@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../../api/axios";
+import { api } from "../../../api/axios";
 import { motion } from "framer-motion";
 
 export default function PatientNavbar() {
@@ -12,6 +12,7 @@ export default function PatientNavbar() {
       { label: "Documents", href: "/patient/documents" },
       { label: "Medical History", href: "/patient/medical-history" },
       { label: "AI Chat", href: "/patient/messages" },
+      { label: "Directory", href: "/patient/directory" },
     ],
     []
   );

@@ -1,64 +1,37 @@
 # CareLine360-WebApp-MERN
 Health helpline - A web application for remote consultation &amp; emergency help in remote regions.
 
-<!-- http://localhost:6000 -->
 
-Here’s a clean **README section** you can paste into `README_AUTH.md` (or main README) so your teammates can use **Email Verification + Forgot Password** instantly.
-
----
-
-# 📧 Email Verification (OTP)
-
-## Purpose
-
-Verifies a user’s email using a **6-digit OTP** (expires in **10 minutes**).
-OTP is stored as a **hash** in DB (not plain text).
-
-## Endpoints
-
-### 1) Send Verification OTP
-
-**POST** `/api/auth/email/send-verify-otp`
-
-Body:
-
-```json
+<!-- Login -->
+http://localhost:5000/api/auth/login
 {
-  "identifier": "user@gmail.com"
+  "identifier":"kyalini2001@gmail.com",
+  "password": "Vanai@2001"
 }
-```
 
-Success:
-
-```json
+<!-- Register -->
 {
-  "message": "Verification OTP sent to email"
+  "role": "patient",
+  "fullname": "Vanaiyalini",
+  "identifier":"kyalini2001@gmail.com",
+  "password": "Vanai@2001"
 }
-```
+<!-- Patient ID -->
+GET
+http://localhost:5000/api/patients/me
 
-Notes:
+<!-- Get medical history -->
+http://localhost:5000/api/patients/me/medical-history
 
-* `identifier` can be email/phone, but email must exist in account.
-* If already verified: returns `"Email already verified"`.
+<!-- AI chat -->
+POST
+http://localhost:5000/api/patients/me/ai-explain
 
----
-
-### 2) Verify Email OTP
-
-**POST** `/api/auth/email/verify-otp`
-
-Body:
-
-```json
 {
-  "identifier": "user@gmail.com",
-  "otp": "123456"
+  "text": "Diagnosis: Hypertension. Medicine: Amlodipine 5mg daily.",
+  "language": "Sinhala"
 }
-```
 
-Success:
-
-```json
 {
   "message": "Email verified successfully"
 }
@@ -165,3 +138,6 @@ SMTP_FROM=CareLine360 <yourgmail@gmail.com>
 7. Try old refresh token → should fail (`Invalid refresh token`)
 
 ---
+  "text": "Diagnosis: Hypertension. Medicine: Amlodipine 5mg daily.",
+  "language": "Tamil"
+

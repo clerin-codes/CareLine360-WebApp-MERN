@@ -1,6 +1,18 @@
 const Patient = require("../models/Patient");
 const User = require("../models/User");
+const MedicalRecord = require("../models/MedicalRecord");
+const Prescription = require("../models/Prescription");
+const Doctor = require("../models/Doctor");
+const Hospital = require("../models/Hospital");
 const { calcPatientProfileStrength } = require("../services/profileStrength");
+
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+const model = genAI.getGenerativeModel({
+  model: "models/gemini-flash-latest"
+});
 
 const getMyProfile = async (req, res) => {
   try {
@@ -247,5 +259,203 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
+const deactivateMyAccount = async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-module.exports = { getMyProfile, updateMyProfile , uploadAvatar };
+    // 1) Deactivate user account
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isActive: false,
+          status: "SUSPENDED", // or "REJECTED"/"PENDING" - your choice
+          refreshTokenHash: null,
+        },
+      },
+      { returnDocument: "after" } // mongoose v7+ (instead of { new: true })
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // 2) Soft delete patient profile (if exists)
+    await Patient.findOneAndUpdate(
+      { userId },
+      { $set: { isDeleted: true } },
+      { returnDocument: "after" }
+    );
+
+    return res.json({ message: "Account deactivated successfully" });
+  } catch (e) {
+    console.error("DEACTIVATE ERROR:", e);
+    return res.status(500).json({ message: e.message || "Server error" });
+  }
+};
+
+const medicalRecord = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // 1) find patient profile (because medicalrecords uses patientId = Patient._id)
+    const patient = await Patient.findOne({
+      userId,
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    });
+
+    if (!patient) return res.status(404).json({ message: "Patient profile not found" });
+
+    // 2) fetch medical records
+    const histories = await MedicalRecord.find({
+      patientId: patient._id,
+      isDeleted: false,
+    })
+      .populate("doctorId")          // returns Doctor document (fullName, specialization, etc.)
+      .populate("appointmentId")     // if linked later
+      .populate("prescriptionId")    // if linked later
+      .sort({ visitDate: -1 });
+
+    return res.json({ histories });
+  } catch (e) {
+    console.error("MEDICAL HISTORY ERROR:", e);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+const explainMedicalText = async (req, res) => {
+  try {
+    const { text, language } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ message: "Text is required" });
+    }
+
+    // Default language = English
+    const selectedLanguage = language || "english";
+
+    const result = await model.generateContent(
+      `Explain this medical information in simple language for a patient.
+
+      Language: ${selectedLanguage}
+
+      Do NOT use markdown formatting.
+      Do NOT use headings.
+      Do NOT use bold text.
+      Do NOT give medical advice.
+      Do NOT change dosage.
+      Only explain meaning clearly.
+
+      ${text}`
+    );
+
+    const explanation = result.response.text();
+
+    return res.json({
+      language: selectedLanguage,
+      explanation
+    });
+
+  } catch (error) {
+    console.error("GEMINI ERROR:", error);
+    return res.status(500).json({ message: "AI service error" });
+  }
+};
+
+
+/**
+ * GET /api/patient/me/medical-records
+ * Patient fetch their own medical records
+ */
+const getMyMedicalRecords = async (req, res) => {
+  try {
+    const patientId = req.user.userId; // from authMiddleware
+
+    const records = await MedicalRecord.find({
+      patientId,
+      isDeleted: false,
+    })
+      .sort({ createdAt: -1 });
+
+    return res.json({ count: records.length, records });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to fetch medical records", error: err.message });
+  }
+};
+
+/**
+ * GET /api/patient/me/prescriptions
+ * Patient fetch their own prescriptions
+ */
+const getMyPrescriptions = async (req, res) => {
+  try {
+    const patientId = req.user.userId;
+
+    const prescriptions = await Prescription.find({ patientId })
+      .sort({ createdAt: -1 });
+
+    return res.json({ count: prescriptions.length, prescriptions });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to fetch prescriptions", error: err.message });
+  }
+};
+
+/**
+ * GET /api/patient/doctors
+ * Patient fetch all doctors (users with role doctor)
+ */
+const getAllDoctorsForPatient = async (req, res) => {
+  const { q = "", hospitalId = "" } = req.query;
+
+  const filter = { isDeleted: { $ne: true } };
+
+  if (hospitalId) filter.hospitalId = hospitalId;
+
+  if (q) {
+    filter.$or = [
+      { fullName: { $regex: q, $options: "i" } },
+      { specialization: { $regex: q, $options: "i" } },
+    ];
+  }
+
+  const doctors = await Doctor.find(filter)
+    .populate("hospitalId", "name city") // needs hospitalId field
+    .select("fullName specialization email phone hospitalId avatarUrl")
+    .sort({ fullName: 1 });
+
+  res.json(doctors);
+};
+
+const getDoctorDetailsForPatient = async (req, res) => {
+  const doc = await Doctor.findById(req.params.id)
+    .populate("hospitalId", "name address city phone email website")
+  if (!doc) return res.status(404).json({ message: "Doctor not found" });
+  res.json(doc);
+};
+
+const getAllHospitalsForPatient = async (req, res) => {
+  const hospitals = await Hospital.find({ isActive: true })
+    .select("name address city phone email website departments imageUrl")
+    .sort({ name: 1 });
+  res.json(hospitals);
+};
+
+const getHospitalDetailsForPatient = async (req, res) => {
+  const hospital = await Hospital.findOne({ _id: req.params.id, isActive: true });
+  if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+  res.json(hospital);
+};
+
+
+module.exports = { 
+  getMyProfile, 
+  updateMyProfile , 
+  uploadAvatar , 
+  deactivateMyAccount, 
+  medicalRecord,
+  explainMedicalText,
+  getMyMedicalRecords,
+  getMyPrescriptions,
+  getAllDoctorsForPatient,
+  getDoctorDetailsForPatient,
+  getAllHospitalsForPatient,
+  getHospitalDetailsForPatient,
+};
