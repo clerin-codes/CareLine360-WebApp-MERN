@@ -44,8 +44,8 @@ export default function ChatWidget({ appointment, onClose }) {
 
     // ── Socket event listeners ───────────────────────────────────────────────
 
-    const onRoomJoined = ({ messages: serverMessages }) => {
-      // Use REST history already loaded; room_joined confirms access
+    const onRoomJoined = ({ messages: serverMessages } = {}) => {
+      // Room join confirmed — enable send button
       setConnected(true);
       if (serverMessages?.length) setMessages(serverMessages);
     };
@@ -74,17 +74,23 @@ export default function ChatWidget({ appointment, onClose }) {
 
     socket.on("room_joined", onRoomJoined);
     socket.on("receive_message", onReceiveMessage);
+    socket.on("new_message", onReceiveMessage); // server emits "new_message"
     socket.on("user_typing", onUserTyping);
     socket.on("messages_read", onMessagesRead);
     socket.on("error", onError);
+    socket.on("connect", () => setConnected(true));
+    socket.on("disconnect", () => setConnected(false));
 
     return () => {
       socket.emit("leave_room", { appointmentId });
       socket.off("room_joined", onRoomJoined);
       socket.off("receive_message", onReceiveMessage);
+      socket.off("new_message", onReceiveMessage);
       socket.off("user_typing", onUserTyping);
       socket.off("messages_read", onMessagesRead);
       socket.off("error", onError);
+      socket.off("connect");
+      socket.off("disconnect");
     };
   }, [appointmentId, myUserId]);
 

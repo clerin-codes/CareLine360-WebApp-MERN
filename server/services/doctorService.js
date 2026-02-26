@@ -402,49 +402,110 @@ const deleteAppointment = async ({ userId, appointmentId }) => {
   if (!appointment)
     return { status: 404, data: { message: "Appointment not found" } };
 
-  // Only allow deletion of non-completed appointments
-  if (appointment.status === "completed")
-    return {
-      status: 400,
-      data: { message: "Cannot delete a completed appointment" },
-    };
-
   await Appointment.findByIdAndDelete(appointmentId);
   return { status: 200, data: { message: "Appointment deleted successfully" } };
 };
 
 // ─── My Patients ──────────────────────────────────────────────────────────────
 
-const getMyPatients = async ({ userId, search, page = 1, limit = 10 }) => {
-  const patientUserIds = await Appointment.distinct("patient", {
-    doctor: userId,
+const getMyPatients = async ({ userId, search, page = 1, limit = 6 }) => {
+  const mongoose = require("mongoose");
+  const doctorObjId = new mongoose.Types.ObjectId(userId);
+
+  // ── Step 1: Aggregate appointment stats per unique booker ────────────────
+  // Starting from Appointments guarantees every user who ever booked appears,
+  // even if they have no Patient profile document.
+  const allStats = await Appointment.aggregate([
+    { $match: { doctor: doctorObjId } },
+    { $sort: { date: -1 } },
+    {
+      $group: {
+        _id: "$patient", // patient User._id
+        appointmentCount: { $sum: 1 },
+        lastVisit: { $max: "$date" },
+        lastAppointmentId: { $first: "$_id" },
+      },
+    },
+  ]);
+
+  const patientUserIds = allStats.map((s) => s._id);
+
+  // ── Step 2: Enrich with User records (email, phone) ──────────────────────
+  const users = await User.find({ _id: { $in: patientUserIds } })
+    .select("email phone")
+    .lean();
+  const userMap = {};
+  users.forEach((u) => {
+    userMap[u._id.toString()] = u;
   });
 
-  const query = { userId: { $in: patientUserIds }, isDeleted: false };
+  // ── Step 3: Enrich with Patient profile (fullName, patientId, avatarUrl) ─
+  const profiles = await Patient.find({
+    userId: { $in: patientUserIds },
+    isDeleted: false,
+  })
+    .select("userId fullName patientId avatarUrl")
+    .lean();
+  const profileMap = {};
+  profiles.forEach((p) => {
+    profileMap[(p.userId?._id || p.userId).toString()] = p;
+  });
+
+  // ── Step 4: Merge into unified list ──────────────────────────────────────
+  let merged = allStats.map((s) => {
+    const uid = s._id.toString();
+    const profile = profileMap[uid] || {};
+    const user = userMap[uid] || {};
+    return {
+      // Patient document _id — null if no profile (Records/Rx will be disabled)
+      _id: profile._id || null,
+      // Keep userId as a sub-object so existing frontend code works unchanged
+      userId: {
+        _id: s._id,
+        email: user.email || "",
+        phone: user.phone || "",
+      },
+      fullName: profile.fullName || user.email || "Unknown Patient",
+      patientId: profile.patientId || null,
+      avatarUrl: profile.avatarUrl || null,
+      appointmentCount: s.appointmentCount,
+      lastVisit: s.lastVisit || null,
+      lastAppointmentId: s.lastAppointmentId || null,
+    };
+  });
+
+  // ── Step 5: Search filter (handles users with or without profiles) ────────
   if (search) {
-    query.$or = [
-      { fullName: { $regex: search, $options: "i" } },
-      { patientId: { $regex: search, $options: "i" } },
-    ];
+    const rx = new RegExp(search, "i");
+    merged = merged.filter(
+      (p) =>
+        rx.test(p.fullName) ||
+        rx.test(p.patientId || "") ||
+        rx.test(p.userId?.email || ""),
+    );
   }
 
+  // Sort: most recent booker first
+  merged.sort((a, b) => {
+    if (!a.lastVisit) return 1;
+    if (!b.lastVisit) return -1;
+    return new Date(b.lastVisit) - new Date(a.lastVisit);
+  });
+
+  // ── Step 6: Paginate in-memory ────────────────────────────────────────────
+  const total = merged.length;
   const skip = (Number(page) - 1) * Number(limit);
-  const total = await Patient.countDocuments(query);
-  const patients = await Patient.find(query)
-    .populate("userId", "email phone isVerified")
-    .skip(skip)
-    .limit(Number(limit))
-    .lean();
+  const paginated = merged.slice(skip, skip + Number(limit));
 
   return {
     status: 200,
     data: {
-      patients,
+      patients: paginated,
       pagination: {
         total,
         page: Number(page),
         limit: Number(limit),
-        pages: Math.ceil(total / Number(limit)),
+        pages: Math.ceil(total / Number(limit)) || 1,
       },
     },
   };
@@ -736,12 +797,34 @@ const getDoctorAnalytics = async ({ userId }) => {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
+  // Build last-6-months labels + ranges for monthly trend chart
+  const monthlyRanges = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return {
+      label: d.toLocaleString("en-US", { month: "short" }),
+      start: new Date(d.getFullYear(), d.getMonth(), 1),
+      end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  });
+
+  // All countDocuments queries — Mongoose auto-casts userId string → ObjectId
   const [
+    totalAppointments,
+    pendingAppointments,
+    completedAppointments,
+    cancelledAppointments,
+    confirmedAppointments,
+    totalPatientsArr,
     thisMonthAppointments,
     lastMonthAppointments,
-    appointmentsByStatus,
-    recentAppointments,
+    ...monthlyCountsRaw
   ] = await Promise.all([
+    Appointment.countDocuments({ doctor: userId }),
+    Appointment.countDocuments({ doctor: userId, status: "pending" }),
+    Appointment.countDocuments({ doctor: userId, status: "completed" }),
+    Appointment.countDocuments({ doctor: userId, status: "cancelled" }),
+    Appointment.countDocuments({ doctor: userId, status: "confirmed" }),
+    Appointment.distinct("patient", { doctor: userId }),
     Appointment.countDocuments({
       doctor: userId,
       createdAt: { $gte: startOfMonth },
@@ -750,26 +833,52 @@ const getDoctorAnalytics = async ({ userId }) => {
       doctor: userId,
       createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
     }),
-    Appointment.aggregate([
-      { $match: { doctor: doctor.userId } },
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ]),
-    Appointment.find({ doctor: userId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("patient", "email")
-      .lean(),
+    ...monthlyRanges.map((r) =>
+      Appointment.countDocuments({
+        doctor: userId,
+        createdAt: { $gte: r.start, $lte: r.end },
+      }),
+    ),
   ]);
+
+  // Build appointmentsByStatus from the reliable countDocuments results
+  const appointmentsByStatus = [
+    { _id: "pending", count: pendingAppointments },
+    { _id: "confirmed", count: confirmedAppointments },
+    { _id: "completed", count: completedAppointments },
+    { _id: "cancelled", count: cancelledAppointments },
+  ].filter((s) => s.count > 0);
+
+  const monthlyTrend = monthlyRanges.map((r, i) => ({
+    month: r.label,
+    count: monthlyCountsRaw[i] || 0,
+  }));
+
+  const completionRate =
+    totalAppointments > 0
+      ? Math.round((completedAppointments / totalAppointments) * 100)
+      : 0;
 
   return {
     status: 200,
     data: {
+      stats: {
+        totalAppointments,
+        pendingAppointments,
+        completedAppointments,
+        cancelledAppointments,
+        confirmedAppointments,
+        totalPatients: totalPatientsArr.length,
+        completionRate,
+      },
+      doctor: {
+        rating: doctor.rating,
+        totalRatings: doctor.totalRatings,
+      },
       thisMonthAppointments,
       lastMonthAppointments,
       appointmentsByStatus,
-      recentAppointments,
-      rating: doctor.rating,
-      totalRatings: doctor.totalRatings,
+      monthlyTrend,
     },
   };
 };

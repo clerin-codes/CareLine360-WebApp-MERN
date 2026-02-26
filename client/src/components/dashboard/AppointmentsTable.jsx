@@ -193,11 +193,11 @@ export default function AppointmentsTable({
 
                     {/* Actions */}
                     <td className="py-3.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {/* View patient past records — always available */}
                         <ActionIcon
-                          icon={<ClipboardList className="h-4.5 w-4.5" />}
-                          title="View Patient's Past Records"
+                          icon={<ClipboardList className="h-5 w-5" />}
+                          label="Records"
                           color="amber"
                           onClick={() => onViewRecords?.(apt)}
                         />
@@ -205,14 +205,14 @@ export default function AppointmentsTable({
                         {apt.status === "pending" && (
                           <>
                             <ActionIcon
-                              icon={<CheckCircle className="h-4.5 w-4.5" />}
-                              title="Confirm"
+                              icon={<CheckCircle className="h-5 w-5" />}
+                              label="Confirm"
                               color="teal"
                               onClick={() => onConfirm?.(apt._id)}
                             />
                             <ActionIcon
-                              icon={<XCircle className="h-4.5 w-4.5" />}
-                              title="Cancel"
+                              icon={<XCircle className="h-5 w-5" />}
+                              label="Cancel"
                               color="rose"
                               onClick={() => onCancel?.(apt._id)}
                             />
@@ -221,42 +221,50 @@ export default function AppointmentsTable({
                         {apt.status === "confirmed" && (
                           <>
                             <ActionIcon
-                              icon={<CircleCheck className="h-4.5 w-4.5" />}
-                              title="Mark as Complete"
+                              icon={<CircleCheck className="h-5 w-5" />}
+                              label="Complete"
                               color="emerald"
                               onClick={() => onComplete?.(apt._id)}
                             />
                             <ActionIcon
-                              icon={<FileText className="h-4.5 w-4.5" />}
-                              title="Add Medical Record"
+                              icon={<FileText className="h-5 w-5" />}
+                              label="Record"
                               color="blue"
                               onClick={() => onAddRecord?.(apt)}
                             />
                             <ActionIcon
-                              icon={<Pill className="h-4.5 w-4.5" />}
-                              title="Generate Prescription"
+                              icon={<Pill className="h-5 w-5" />}
+                              label="Prescribe"
                               color="violet"
                               onClick={() => onPrescription?.(apt)}
                             />
                             <ActionIcon
-                              icon={<MessageSquare className="h-4.5 w-4.5" />}
-                              title="Chat"
+                              icon={<MessageSquare className="h-5 w-5" />}
+                              label="Chat"
                               color="gray"
                               onClick={() => onChat?.(apt)}
                             />
                           </>
                         )}
                         {apt.status === "completed" && (
-                          <span className="text-[11px] text-gray-400">
-                            Done
-                          </span>
+                          <>
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                              <CircleCheck className="h-4 w-4" /> Done
+                            </span>
+                            <ActionIcon
+                              icon={<Trash2 className="h-5 w-5" />}
+                              label="Delete"
+                              color="danger"
+                              onClick={() => onDelete?.(apt._id)}
+                            />
+                          </>
                         )}
 
-                        {/* Delete — only for non-completed appointments */}
+                        {/* Delete — for non-completed appointments */}
                         {apt.status !== "completed" && (
                           <ActionIcon
-                            icon={<Trash2 className="h-4.5 w-4.5" />}
-                            title="Delete Appointment"
+                            icon={<Trash2 className="h-5 w-5" />}
+                            label="Delete"
                             color="danger"
                             onClick={() => onDelete?.(apt._id)}
                           />
@@ -275,26 +283,52 @@ export default function AppointmentsTable({
 }
 
 const COLOR_CLASSES = {
-  teal: "bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20",
-  rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20",
-  blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20",
+  teal: "bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/25 hover:shadow-md hover:shadow-teal-500/20",
+  rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 hover:shadow-md hover:shadow-rose-500/20",
+  blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25 hover:shadow-md hover:shadow-blue-500/20",
   violet:
-    "bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20",
+    "bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/25 hover:shadow-md hover:shadow-violet-500/20",
   amber:
-    "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20",
-  gray: "bg-gray-500/10 text-gray-600 dark:text-gray-400 hover:bg-gray-500/20",
+    "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 hover:shadow-md hover:shadow-amber-500/20",
+  emerald:
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 hover:shadow-md hover:shadow-emerald-500/20",
+  gray: "bg-gray-500/10 text-gray-600 dark:text-gray-400 hover:bg-gray-500/25 hover:shadow-md hover:shadow-gray-500/10",
   danger:
-    "bg-rose-500/10 text-rose-500 dark:text-rose-400 hover:bg-rose-500/25 border border-rose-300/40 dark:border-rose-500/30",
+    "bg-rose-500/10 text-rose-500 dark:text-rose-400 hover:bg-rose-500/25 border border-rose-300/40 dark:border-rose-500/30 hover:shadow-md hover:shadow-rose-500/20",
 };
 
-function ActionIcon({ icon, title, color, onClick }) {
+/**
+ * Animated action icon button — shows label text on hover (slide-expand).
+ */
+function ActionIcon({ icon, label, color, onClick }) {
   return (
     <button
-      title={title}
+      title={label}
       onClick={onClick}
-      className={`p-2 rounded-lg transition-all active:scale-95 ${COLOR_CLASSES[color] || COLOR_CLASSES.gray}`}
+      className={`
+        group/btn
+        inline-flex items-center gap-0
+        px-2.5 py-2 rounded-xl
+        overflow-hidden
+        transition-all duration-200 ease-out
+        active:scale-95
+        ${COLOR_CLASSES[color] || COLOR_CLASSES.gray}
+      `}
     >
-      {icon}
+      {/* Icon — always visible */}
+      <span className="shrink-0 flex items-center">{icon}</span>
+
+      {/* Label — slides in on hover */}
+      <span
+        className="
+          text-[11px] font-semibold whitespace-nowrap
+          max-w-0 opacity-0 overflow-hidden
+          group-hover/btn:max-w-[72px] group-hover/btn:opacity-100 group-hover/btn:ml-1.5
+          transition-all duration-200 ease-out
+        "
+      >
+        {label}
+      </span>
     </button>
   );
 }

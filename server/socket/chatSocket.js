@@ -27,7 +27,9 @@ const registerSocketHandlers = (io) => {
 
   io.on("connection", (socket) => {
     const { id: userId, role } = socket.user;
-    console.log(`🔌 Socket connected: userId=${userId} role=${role} socketId=${socket.id}`);
+    console.log(
+      `🔌 Socket connected: userId=${userId} role=${role} socketId=${socket.id}`,
+    );
 
     /**
      * Client joins a room scoped to an appointment.
@@ -37,6 +39,8 @@ const registerSocketHandlers = (io) => {
       if (!appointmentId) return;
       socket.join(appointmentId);
       console.log(`📥 ${role}:${userId} joined room ${appointmentId}`);
+      // Confirm to the joining client that they are now in the room
+      socket.emit("room_joined", { appointmentId });
     });
 
     /**
@@ -80,8 +84,10 @@ const registerSocketHandlers = (io) => {
      * Notify room members that this user is typing.
      * Event: "typing"  payload: { appointmentId }
      */
-    socket.on("typing", ({ appointmentId }) => {
-      socket.to(appointmentId).emit("user_typing", { userId, role });
+    socket.on("typing", ({ appointmentId, isTyping }) => {
+      socket
+        .to(appointmentId)
+        .emit("user_typing", { userId, role, isTyping: !!isTyping });
     });
 
     /**
@@ -89,7 +95,9 @@ const registerSocketHandlers = (io) => {
      * Event: "stop_typing"  payload: { appointmentId }
      */
     socket.on("stop_typing", ({ appointmentId }) => {
-      socket.to(appointmentId).emit("user_stop_typing", { userId, role });
+      socket
+        .to(appointmentId)
+        .emit("user_typing", { userId, role, isTyping: false });
     });
 
     socket.on("disconnect", (reason) => {
