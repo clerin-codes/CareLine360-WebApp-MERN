@@ -2,6 +2,8 @@ const Patient = require("../models/Patient");
 const User = require("../models/User");
 const MedicalRecord = require("../models/MedicalRecord");
 const Prescription = require("../models/Prescription");
+const Doctor = require("../models/Doctor");
+const Hospital = require("../models/Hospital");
 const { calcPatientProfileStrength } = require("../services/profileStrength");
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -401,17 +403,46 @@ const getMyPrescriptions = async (req, res) => {
  * Patient fetch all doctors (users with role doctor)
  */
 const getAllDoctorsForPatient = async (req, res) => {
-  try {
-    const doctors = await User.find({ role: "doctor" })
-      .select("_id name email status avatar specialty") // keep what you have
-      .sort({ createdAt: -1 });
+  const { q = "", hospitalId = "" } = req.query;
 
-    return res.json({ count: doctors.length, doctors });
-  } catch (err) {
-    return res.status(500).json({ message: "Failed to fetch doctors", error: err.message });
+  const filter = { isDeleted: { $ne: true } };
+
+  if (hospitalId) filter.hospitalId = hospitalId;
+
+  if (q) {
+    filter.$or = [
+      { fullName: { $regex: q, $options: "i" } },
+      { specialization: { $regex: q, $options: "i" } },
+    ];
   }
+
+  const doctors = await Doctor.find(filter)
+    .populate("hospitalId", "name city") // needs hospitalId field
+    .select("fullName specialization email phone hospitalId avatarUrl")
+    .sort({ fullName: 1 });
+
+  res.json(doctors);
 };
 
+const getDoctorDetailsForPatient = async (req, res) => {
+  const doc = await Doctor.findById(req.params.id)
+    .populate("hospitalId", "name address city phone email website")
+  if (!doc) return res.status(404).json({ message: "Doctor not found" });
+  res.json(doc);
+};
+
+const getAllHospitalsForPatient = async (req, res) => {
+  const hospitals = await Hospital.find({ isActive: true })
+    .select("name address city phone email website departments imageUrl")
+    .sort({ name: 1 });
+  res.json(hospitals);
+};
+
+const getHospitalDetailsForPatient = async (req, res) => {
+  const hospital = await Hospital.findOne({ _id: req.params.id, isActive: true });
+  if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+  res.json(hospital);
+};
 
 
 module.exports = { 
@@ -424,4 +455,7 @@ module.exports = {
   getMyMedicalRecords,
   getMyPrescriptions,
   getAllDoctorsForPatient,
+  getDoctorDetailsForPatient,
+  getAllHospitalsForPatient,
+  getHospitalDetailsForPatient,
 };

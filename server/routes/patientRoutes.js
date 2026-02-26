@@ -7,10 +7,13 @@ const {
   deactivateMyAccount , 
   explainMedicalText,
 
-
   getMyMedicalRecords,
   getMyPrescriptions,
   getAllDoctorsForPatient,
+
+  getDoctorDetailsForPatient,
+  getAllHospitalsForPatient,
+  getHospitalDetailsForPatient,
 } = require("../controllers/patientController");
 const { imageUpload } = require("../middleware/upload");
 
@@ -74,6 +77,29 @@ router.get(
   authMiddleware, 
   roleMiddleware(["patient"]), 
   getAllDoctorsForPatient
+);
+
+// hospitals
+router.get(
+  "/hospital",
+  authMiddleware, 
+  roleMiddleware(["patient"]),
+  getAllHospitalsForPatient
+);
+
+router.get(
+  "/hospital/:id",
+  authMiddleware, 
+  roleMiddleware(["patient"]),
+  getHospitalDetailsForPatient
+);
+
+// doctors detail
+router.get(
+  "/doctor/:id",
+  authMiddleware, 
+  roleMiddleware(["patient"]),
+  getDoctorDetailsForPatient
 );
 
 // Get appointments for a specific patient (for doctors)
