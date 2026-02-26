@@ -97,7 +97,7 @@ const MeetAssign = () => {
 
             roomName: roomName,
             width: '100%',
-            height: 600,
+            height: '100%',
             parentNode: jitsiContainerRef.current,
             userInfo: {
                 displayName: 'Admin - CareLine360'
@@ -165,175 +165,178 @@ const MeetAssign = () => {
                 </div>
             </div>
 
-            {selectedMeeting ? (
-                <div className="bg-[var(--bg-surface)] rounded-[32px] shadow-2xl overflow-hidden border border-[var(--border)] mb-12 animate-in zoom-in-95 duration-300">
-                    <div className="p-8 border-b border-[var(--border)] flex justify-between items-center bg-[var(--bg-subtle)]">
-                        <div className="flex items-center gap-6">
-                            <div className="bg-teal-500/10 p-4 rounded-2xl text-teal-600 shadow-inner">
-                                <Video size={28} />
+            {selectedMeeting && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-[var(--bg-surface)] w-full max-w-6xl h-[90vh] rounded-[32px] shadow-2xl overflow-hidden border border-[var(--border)] flex flex-col animate-in zoom-in-95 duration-300">
+                        <div className="p-6 border-b border-[var(--border)] flex justify-between items-center bg-[var(--bg-subtle)]">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-teal-500/10 p-3 rounded-2xl text-teal-600 shadow-inner">
+                                    <Video size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-[var(--text-primary)] tracking-tight">
+                                        Active Consultation: {selectedMeeting.patient?.fullName || 'Identity Pending'}
+                                    </h2>
+                                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
+                                        Primary Consultant: Dr. {selectedMeeting.doctor?.fullName || 'Unassigned'}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
-                                    Live Session: {selectedMeeting.patient?.fullName || 'Identity Pending'}
-                                </h2>
-                                <p className="text-xs font-black text-teal-600 uppercase tracking-widest mt-1">
-                                    Primary Consultant: Dr. {selectedMeeting.doctor?.fullName || 'Unassigned'}
-                                </p>
-                            </div>
+                            <button
+                                onClick={closeMeeting}
+                                className="p-3 hover:bg-rose-500/10 hover:text-rose-500 rounded-full transition-all text-[var(--text-muted)]"
+                            >
+                                <XCircle size={28} />
+                            </button>
                         </div>
-                        <button
-                            onClick={closeMeeting}
-                            className="p-3 hover:bg-rose-500/10 hover:text-rose-500 rounded-full transition-all text-[var(--text-muted)]"
-                        >
-                            <XCircle size={28} />
-                        </button>
-                    </div>
-                    <div className="p-6 bg-[var(--bg-surface)]">
-                        <div ref={jitsiContainerRef} className="rounded-3xl overflow-hidden shadow-2xl bg-slate-950 min-h-[600px] border border-[var(--border)]">
-                            {/* Jitsi meet will be mounted here */}
+                        <div className="flex-1 bg-black relative">
+                            <div ref={jitsiContainerRef} className="absolute inset-0 w-full h-full">
+                                {/* Jitsi meet will be mounted here */}
+                            </div>
                         </div>
                     </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {loading ? (
-                        Array(6).fill(0).map((_, i) => (
-                            <div key={i} className="bg-[var(--bg-surface)] rounded-3xl p-6 shadow-sm border border-[var(--border)] animate-pulse">
-                                <div className="h-12 w-12 bg-[var(--bg-subtle)] rounded-2xl mb-4"></div>
-                                <div className="h-6 w-3/4 bg-[var(--bg-subtle)] rounded-lg mb-2"></div>
-                                <div className="h-4 w-1/2 bg-[var(--bg-subtle)] rounded-lg"></div>
-                            </div>
-                        ))
-                    ) : appointments.length === 0 ? (
-                        <div className="col-span-full py-24 flex flex-col items-center justify-center text-center">
-                            <div className="bg-[var(--bg-subtle)] p-8 rounded-full mb-6 border border-[var(--border)] shadow-inner">
-                                <Video size={48} className="text-[var(--text-muted)]" />
-                            </div>
-                            <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">No Appointments Found</h3>
-                            <p className="text-[var(--text-secondary)] mt-2 max-w-sm font-medium">
-                                There are currently no appointments matching the selected filters.
-                            </p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loading ? (
+                    Array(6).fill(0).map((_, i) => (
+                        <div key={i} className="bg-[var(--bg-surface)] rounded-3xl p-6 shadow-sm border border-[var(--border)] animate-pulse">
+                            <div className="h-12 w-12 bg-[var(--bg-subtle)] rounded-2xl mb-4"></div>
+                            <div className="h-6 w-3/4 bg-[var(--bg-subtle)] rounded-lg mb-2"></div>
+                            <div className="h-4 w-1/2 bg-[var(--bg-subtle)] rounded-lg"></div>
                         </div>
-                    ) : (
-                        appointments.map((appt) => (
-                            <div key={appt._id} className="bg-[var(--bg-surface)] rounded-3xl p-6 shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 border border-[var(--border)] group">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className={`p-3.5 rounded-2xl ${appt.priority === 'high' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                        appt.priority === 'medium' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-                                            'bg-teal-500/10 text-teal-600 dark:text-teal-400'
-                                        } group-hover:scale-110 transition-transform duration-300`}>
-                                        {((appt.consultationType || '').toLowerCase() === 'video') ? (
-                                            <Video size={24} />
-                                        ) : ((appt.consultationType || '').toLowerCase() === 'phone') ? (
-                                            <Phone size={24} />
-                                        ) : (
-                                            <ExternalLink size={24} />
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30' :
-                                            appt.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/30' :
-                                                'bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border)]'
-                                            }`}>
-                                            {appt.status}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <h3 className="text-xl font-black text-[var(--text-primary)] mb-1 tracking-tight">
-                                    {appt.patient?.fullName || 'Identity Pending'}
-                                </h3>
-                                <p className="text-xs text-[var(--text-secondary)] mb-6 flex items-center gap-2 font-bold uppercase tracking-widest italic">
-                                    <User size={13} className="text-teal-500" />
-                                    Dr. {appt.doctor?.fullName || 'Awaiting Assignment'}
-                                </p>
-
-                                <div className="space-y-3 mb-8 bg-[var(--bg-subtle)] p-4 rounded-2xl border border-[var(--border)]">
-                                    <div className="flex items-center gap-3 text-xs font-bold text-[var(--text-secondary)]">
-                                        <Calendar size={14} className="text-teal-500" />
-                                        {new Date(appt.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-xs font-bold text-[var(--text-secondary)]">
-                                        <Clock size={14} className="text-teal-500" />
-                                        {appt.time}
-                                    </div>
-
-                                    {((appt.consultationType || '').toLowerCase() === 'video') && (
-                                        <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
-                                            <a
-                                                href={appt.meetingUrl ? `${appt.meetingUrl}/static/dialInInfo.html?room=${appt.meetingUrl.split('/').pop()}` : `https://meet.jit.si/static/dialInInfo.html?room=CareLine360-${appt._id}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                                            >
-                                                <Phone size={12} />
-                                                View Dial-in Info
-                                            </a>
-                                        </div>
+                    ))
+                ) : appointments.length === 0 ? (
+                    <div className="col-span-full py-24 flex flex-col items-center justify-center text-center">
+                        <div className="bg-[var(--bg-subtle)] p-8 rounded-full mb-6 border border-[var(--border)] shadow-inner">
+                            <Video size={48} className="text-[var(--text-muted)]" />
+                        </div>
+                        <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">No Appointments Found</h3>
+                        <p className="text-[var(--text-secondary)] mt-2 max-w-sm font-medium">
+                            There are currently no appointments matching the selected filters.
+                        </p>
+                    </div>
+                ) : (
+                    appointments.map((appt) => (
+                        <div key={appt._id} className="bg-[var(--bg-surface)] rounded-3xl p-6 shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 border border-[var(--border)] group">
+                            <div className="flex justify-between items-start mb-6">
+                                <div className={`p-3.5 rounded-2xl ${appt.priority === 'high' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                    appt.priority === 'medium' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                        'bg-teal-500/10 text-teal-600 dark:text-teal-400'
+                                    } group-hover:scale-110 transition-transform duration-300`}>
+                                    {((appt.consultationType || '').toLowerCase() === 'video') ? (
+                                        <Video size={24} />
+                                    ) : ((appt.consultationType || '').toLowerCase() === 'phone') ? (
+                                        <Phone size={24} />
+                                    ) : (
+                                        <ExternalLink size={24} />
                                     )}
                                 </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${appt.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30' :
+                                        appt.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/30' :
+                                            'bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border)]'
+                                        }`}>
+                                        {appt.status}
+                                    </span>
+                                </div>
+                            </div>
 
-                                {((appt.consultationType || '').toLowerCase() === 'video') ? (
-                                    appt.meetingUrl ? (
-                                        <button
-                                            onClick={() => startMeeting(appt)}
-                                            className="w-full py-3.5 bg-teal-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-teal-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 active:scale-95"
+                            <h3 className="text-xl font-black text-[var(--text-primary)] mb-1 tracking-tight">
+                                {appt.patient?.fullName || 'Identity Pending'}
+                            </h3>
+                            <p className="text-xs text-[var(--text-secondary)] mb-6 flex items-center gap-2 font-bold uppercase tracking-widest italic">
+                                <User size={13} className="text-teal-500" />
+                                Dr. {appt.doctor?.fullName || 'Awaiting Assignment'}
+                            </p>
+
+                            <div className="space-y-3 mb-8 bg-[var(--bg-subtle)] p-4 rounded-2xl border border-[var(--border)]">
+                                <div className="flex items-center gap-3 text-xs font-bold text-[var(--text-secondary)]">
+                                    <Calendar size={14} className="text-teal-500" />
+                                    {new Date(appt.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs font-bold text-[var(--text-secondary)]">
+                                    <Clock size={14} className="text-teal-500" />
+                                    {appt.time}
+                                </div>
+
+                                {((appt.consultationType || '').toLowerCase() === 'video') && (
+                                    <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                                        <a
+                                            href={appt.meetingUrl ? `${appt.meetingUrl}/static/dialInInfo.html?room=${appt.meetingUrl.split('/').pop()}` : `https://meet.jit.si/static/dialInInfo.html?room=CareLine360-${appt._id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                                         >
-                                            <Video size={18} />
-                                            Start Session
-                                        </button>
-                                    ) : appt.status === 'confirmed' ? (
-                                        <button
-                                            onClick={() => createMeeting(appt)}
-                                            className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95"
-                                        >
-                                            <Video size={18} />
-                                            Initialize Meet
-                                        </button>
-                                    ) : (
-                                        <button
-                                            disabled
-                                            className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]"
-                                        >
-                                            <Video size={18} />
-                                            Meet Unavailable
-                                        </button>
-                                    )
-                                ) : ((appt.consultationType || '').toLowerCase() === 'phone') ? (
-                                    appt.status === 'confirmed' ? (
-                                        <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
-                                            <Phone size={18} />
-                                            Session Locked
-                                        </button>
-                                    ) : appt.patient?.phone ? (
-                                        <a href={`tel:${appt.patient.phone}`} className="w-full block text-center py-3.5 bg-teal-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-teal-700 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
-                                            <Phone size={18} className="inline-block mr-2" />
-                                            Contact Now
+                                            <Phone size={12} />
+                                            View Dial-in Info
                                         </a>
-                                    ) : (
-                                        <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
-                                            <Phone size={18} />
-                                            No Registry
-                                        </button>
-                                    )
-                                ) : (
-                                    // in-person
-                                    appt.status === 'confirmed' ? (
-                                        <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
-                                            <Users size={18} />
-                                            In-Person Logged
-                                        </button>
-                                    ) : (
-                                        <div className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-[var(--border)] text-[10px]">
-                                            <ExternalLink size={16} />
-                                            Hospital Visit
-                                        </div>
-                                    )
+                                    </div>
                                 )}
                             </div>
-                        ))
-                    )}
-                </div>
+
+                            {((appt.consultationType || '').toLowerCase() === 'video') ? (
+                                appt.meetingUrl ? (
+                                    <button
+                                        onClick={() => startMeeting(appt)}
+                                        className="w-full py-3.5 bg-teal-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-teal-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 active:scale-95"
+                                    >
+                                        <Video size={18} />
+                                        Start Session
+                                    </button>
+                                ) : appt.status === 'confirmed' ? (
+                                    <button
+                                        onClick={() => createMeeting(appt)}
+                                        className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95"
+                                    >
+                                        <Video size={18} />
+                                        Initialize Meet
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled
+                                        className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]"
+                                    >
+                                        <Video size={18} />
+                                        Meet Unavailable
+                                    </button>
+                                )
+                            ) : ((appt.consultationType || '').toLowerCase() === 'phone') ? (
+                                appt.status === 'confirmed' ? (
+                                    <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
+                                        <Phone size={18} />
+                                        Session Locked
+                                    </button>
+                                ) : appt.patient?.phone ? (
+                                    <a href={`tel:${appt.patient.phone}`} className="w-full block text-center py-3.5 bg-teal-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-teal-700 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
+                                        <Phone size={18} className="inline-block mr-2" />
+                                        Contact Now
+                                    </a>
+                                ) : (
+                                    <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
+                                        <Phone size={18} />
+                                        No Registry
+                                    </button>
+                                )
+                            ) : (
+                                // in-person
+                                appt.status === 'confirmed' ? (
+                                    <button disabled className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest cursor-not-allowed flex items-center justify-center gap-2 border border-[var(--border)]">
+                                        <Users size={18} />
+                                        In-Person Logged
+                                    </button>
+                                ) : (
+                                    <div className="w-full py-3.5 bg-[var(--bg-subtle)] text-[var(--text-muted)] rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-[var(--border)] text-[10px]">
+                                        <ExternalLink size={16} />
+                                        Hospital Visit
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
             )}
         </div>
     );

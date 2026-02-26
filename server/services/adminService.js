@@ -5,6 +5,91 @@ const Doctor = require("../models/Doctor");
 const EmergencyCase = require("../models/EmergencyCase");
 const Appointment = require("../models/Appointment");
 const { sendEmail } = require("./emailService");
+const { sendSMS } = require("./smsService");
+
+const sendStatusUpdateEmail = (user, newStatus) => {
+  const email = user.email;
+  const phone = user.phone;
+
+  let emailSubject = "";
+  let emailBody = "";
+  let smsMessage = "";
+  const isSuspended = newStatus === "SUSPENDED";
+  const isActive = newStatus === "ACTIVE";
+  const isRejected = newStatus === "REJECTED";
+
+  if (isActive) {
+    emailSubject = "Great News: Your CareLine360 account is now active";
+    smsMessage = `Hello ${user.fullName}, Great News! Your CareLine360 account is now active. You can now login to the platform.`;
+    if (user.role === "doctor") {
+      // Detailed Doctor Activation Email
+      if (email) {
+        sendEmail({
+          to: email,
+          subject: `🎉 Your CareLine360 Doctor Account is Now Active!`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+              <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: #2c5aa0; margin: 0;">🏥 CareLine360</h1>
+                  <h2 style="color: #28a745; margin: 10px 0;">🎉 Account Verified!</h2>
+                </div>
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear Dr. ${user.fullName || 'Doctor'},</p>
+                <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                  <h3 style="color: #155724; margin-top: 0;">✅ Congratulations!</h3>
+                  <p style="font-size: 16px; color: #155724; line-height: 1.6; margin: 0;">Your doctor account has been successfully <strong>verified and activated</strong>.</p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display: inline-block; background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login Now</a>
+                </div>
+              </div>
+            </div>
+          `
+        }).catch(err => console.error("Doctor Activation Email Error:", err));
+      } else if (phone) {
+        sendSMS({ contact: phone, message: smsMessage });
+      }
+      return;
+    }
+    emailBody = `
+      <h2 style="color: #10b981;">Account Activated</h2>
+      <p>Hello ${user.fullName},</p>
+      <p>Your CareLine360 account has been successfully approved and activated.</p>
+    `;
+  } else if (isSuspended) {
+    emailSubject = "Important: Your CareLine360 account has been suspended";
+    smsMessage = `Hello ${user.fullName}, Important: Your CareLine360 account has been suspended by administration. Contact support for details.`;
+    emailBody = `
+      <h2 style="color: #ef4444;">Account Suspended</h2>
+      <p>Hello ${user.fullName},</p>
+      <p>We are writing to inform you that your CareLine360 account has been suspended by the administration.</p>
+    `;
+  } else if (isRejected) {
+    emailSubject = "Update: Your CareLine360 registration request";
+    smsMessage = `Hello ${user.fullName}, Updates regarding your CareLine360 registration: At this time we are unable to approve your request.`;
+    emailBody = `
+      <h2 style="color: #f59e0b;">Registration Update</h2>
+      <p>Hello ${user.fullName}, At this time, we are unable to approve your registration request.</p>
+    `;
+  }
+
+  if (email && emailBody) {
+    sendEmail({
+      to: email,
+      subject: emailSubject,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;">
+          ${emailBody}
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+            <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display: inline-block; background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to CareLine360</a>
+          </div>
+        </div>
+      `
+    }).catch(err => console.error("Status Update Email Error:", err));
+  } else if (!email && phone && smsMessage) {
+    sendSMS({ contact: phone, message: smsMessage });
+  }
+};
 
 
 const listPendingDoctors = async () => {
@@ -123,27 +208,7 @@ const toggleUserStatus = async (id) => {
   await user.save();
 
   // Notify user via email in background
-  if (user.email) {
-    const isSuspended = newStatus === "SUSPENDED";
-    sendEmail({
-      to: user.email,
-      subject: isSuspended ? "Important: Your CareLine360 account has been suspended" : "Great News: Your CareLine360 account is now active",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: ${isSuspended ? '#ef4444' : '#10b981'};">${isSuspended ? 'Account Suspended' : 'Account Activated'}</h2>
-          <p>Hello ${user.fullName},</p>
-          <p>This is to inform you that your CareLine360 account status has been updated to <strong>${newStatus}</strong> by the administration.</p>
-          ${isSuspended
-          ? '<p style="color: #666;">If you believe this is a mistake, please contact our support team to appeal this decision.</p>'
-          : '<p>You can now log in to the platform and access all your services.</p>'
-        }
-          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-            <p style="font-size: 12px; color: #999;">This is an automated notification from CareLine360.</p>
-          </div>
-        </div>
-      `
-    }).catch(err => console.error("Status Change Email Error:", err));
-  }
+  sendStatusUpdateEmail(user, newStatus);
 
   return { status: 200, data: user };
 };
@@ -253,63 +318,9 @@ const updateUserStatus = async ({ userId, status }) => {
   if (!user) return { status: 404, data: { message: "User not found" } };
 
   // Notify user via email in background when status changes significantly
-  if (user.email) {
-    let emailSubject = "";
-    let emailBody = "";
-
-    if (status === "ACTIVE") {
-      emailSubject = "Great News: Your CareLine360 account is now active";
-      emailBody = `
-        <h2 style="color: #10b981;">Account Activated</h2>
-        <p>Hello ${user.fullName},</p>
-        <p>Your CareLine360 account has been successfully approved and activated.</p>
-        <p>You can now log in and access all features associated with your account.</p>
-      `;
-    } else if (status === "SUSPENDED") {
-      emailSubject = "Important: Your CareLine360 account has been suspended";
-      emailBody = `
-        <h2 style="color: #ef4444;">Account Suspended</h2>
-        <p>Hello ${user.fullName},</p>
-        <p>We are writing to inform you that your CareLine360 account has been suspended by the administration.</p>
-        <p style="color: #666;">If you have any questions regarding this action, please contact our support team.</p>
-      `;
-    } else if (status === "REJECTED") {
-      emailSubject = "Update: Your CareLine360 registration request";
-      emailBody = `
-        <h2 style="color: #f59e0b;">Registration Update</h2>
-        <p>Hello ${user.fullName},</p>
-        <p>Thank you for your interest in CareLine360. At this time, we are unable to approve your registration request.</p>
-        <p style="color: #666;">You may contact support for more detailed feedback regarding your application.</p>
-      `;
-    }
-
-    if (emailBody) {
-      // For doctors being activated, we use the detailed template already in place if possible, 
-      // or just stay with a clean generic one. The previous code had a very long doctor template.
-      // I will keep the doctor template for doctors being activated, and use generic for others.
-
-      if (user.role === "doctor" && status === "ACTIVE") {
-        // ... (Keep existing doctor verification logic but make it non-blocking if not already)
-      } else {
-        sendEmail({
-          to: user.email,
-          subject: emailSubject,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;">
-              ${emailBody}
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
-                <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display: inline-block; background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to CareLine360</a>
-                <p style="font-size: 12px; color: #999; margin-top: 20px;">This is an automated notification. Please do not reply directly to this email.</p>
-              </div>
-            </div>
-          `
-        }).catch(err => console.error("Status Update Email Error:", err));
-      }
-    }
-  }
+  sendStatusUpdateEmail(user, status);
 
   return { status: 200, data: { message: "Status updated", user } };
-};
 };
 
 const createUser = async (userData) => {
@@ -453,30 +464,30 @@ const createMeetingLink = async (appointmentId) => {
       </div>
     `;
 
-    // Send email to patient
-    if (appt.patient?.email) {
-      await sendEmail({
-        to: appt.patient.email,
-        subject: emailSubject,
-        html: patientEmailHtml
-      });
-    }
+    // Send notifications to both patient and doctor in background
+    const notifyUser = (user, type) => {
+      const meetingMessage = `Your meeting is Confirm by Admin of CareLine 360. Link: ${meetingUrl}`;
 
-    // Send email to doctor
-    if (appt.doctor?.email) {
-      await sendEmail({
-        to: appt.doctor.email,
-        subject: emailSubject,
-        html: doctorEmailHtml
-      });
-    }
+      if (user.email) {
+        const emailHtml = type === 'patient' ? patientEmailHtml : doctorEmailHtml;
+        sendEmail({
+          to: user.email,
+          subject: emailSubject,
+          html: emailHtml
+        }).catch(err => console.error(`${type} Meeting Email Error:`, err));
+      } else if (user.phone) {
+        sendSMS({ contact: user.phone, message: meetingMessage });
+      }
+    };
 
-  } catch (emailError) {
-    console.error('Failed to send meeting link emails:', emailError);
-    // Don't fail the main operation if email fails
+    notifyUser(appt.patient, 'patient');
+    notifyUser(appt.doctor, 'doctor');
+
+    return { status: 200, data: appt };
+  } catch (error) {
+    console.error('Meeting Link Notification Error:', error);
+    return { status: 500, data: { message: error.message } };
   }
-
-  return { status: 200, data: appt };
 };
 
 const updateUser = async (id, updateData) => {
