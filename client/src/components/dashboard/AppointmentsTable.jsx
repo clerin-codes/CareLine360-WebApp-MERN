@@ -7,6 +7,7 @@ import {
   Pill,
   ClipboardList,
   CircleCheck,
+  Eye,
 } from "lucide-react";
 import { PRIORITY_BADGE, STATUS_BADGE, getInitials } from "../../utils/colors";
 
@@ -40,6 +41,7 @@ export default function AppointmentsTable({
   onViewRecords,
   onComplete,
   onViewAll,
+  onViewDetail,
 }) {
   return (
     <div className="glass-card rounded-2xl p-6">
@@ -194,6 +196,16 @@ export default function AppointmentsTable({
                     {/* Actions */}
                     <td className="py-3.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* View appointment detail — always available */}
+                        {onViewDetail && (
+                          <ActionIcon
+                            icon={<Eye className="h-5 w-5" />}
+                            label="View"
+                            color="teal"
+                            onClick={() => onViewDetail(apt)}
+                          />
+                        )}
+
                         {/* View patient past records — always available */}
                         <ActionIcon
                           icon={<ClipboardList className="h-5 w-5" />}

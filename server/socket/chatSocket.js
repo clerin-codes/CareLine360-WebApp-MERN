@@ -33,15 +33,18 @@ const registerSocketHandlers = (io) => {
 
     /**
      * Client joins a room scoped to an appointment.
-     * Event: "join_room"  payload: { appointmentId: string }
+     * snake_case: "join_room"  payload: { appointmentId: string }
+     * camelCase:  "joinRoom"   payload: appointmentId (string)
      */
-    socket.on("join_room", ({ appointmentId }) => {
+    const handleJoinRoom = (appointmentId) => {
       if (!appointmentId) return;
       socket.join(appointmentId);
       console.log(`📥 ${role}:${userId} joined room ${appointmentId}`);
-      // Confirm to the joining client that they are now in the room
       socket.emit("room_joined", { appointmentId });
-    });
+    };
+
+    socket.on("join_room", ({ appointmentId }) => handleJoinRoom(appointmentId));
+    socket.on("joinRoom", (appointmentId) => handleJoinRoom(appointmentId));
 
     /**
      * Client leaves a room.
@@ -55,16 +58,16 @@ const registerSocketHandlers = (io) => {
 
     /**
      * Client sends a chat message.
-     * Event: "send_message"  payload: { appointmentId, message }
-     * Emits back: "new_message" to all sockets in the room (including sender)
-     *             "send_error"  to sender on failure
+     * snake_case: "send_message"  payload: { appointmentId, message }
+     * camelCase:  "sendMessage"   payload: { appointment, sender, senderRole, message }
+     * Dual-emits: "new_message" + "newMessage" so both doctor & patient UIs receive it
      */
-    socket.on("send_message", async ({ appointmentId, message }) => {
+    const handleSendMessage = async ({ appointmentId, senderId, senderRole, message }) => {
       try {
         const result = await sendMessage({
           appointmentId,
-          senderId: userId,
-          senderRole: role,
+          senderId,
+          senderRole,
           message,
         });
 
@@ -72,12 +75,26 @@ const registerSocketHandlers = (io) => {
           return socket.emit("send_error", { message: result.data.message });
         }
 
-        // Broadcast to everyone in the room (including sender)
+        // Dual-emit so both naming conventions receive the message
         io.to(appointmentId).emit("new_message", result.data.chat);
+        io.to(appointmentId).emit("newMessage", result.data.chat);
       } catch (err) {
         console.error("Socket send_message error:", err);
         socket.emit("send_error", { message: "Failed to send message" });
       }
+    };
+
+    socket.on("send_message", async ({ appointmentId, message }) => {
+      await handleSendMessage({ appointmentId, senderId: userId, senderRole: role, message });
+    });
+
+    socket.on("sendMessage", async (data) => {
+      await handleSendMessage({
+        appointmentId: data.appointment,
+        senderId: data.sender || userId,
+        senderRole: data.senderRole || role,
+        message: data.message,
+      });
     });
 
     /**

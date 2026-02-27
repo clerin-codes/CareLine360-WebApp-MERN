@@ -7,7 +7,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
-const chatService = require("./services/chatService");
 
 // Routes
 const authRoutes = require("./routes/authRoutes");
@@ -95,33 +94,8 @@ const io = new Server(httpServer, {
   },
 });
 
-// Register structured socket event handlers (doctor-module)
+// Register structured socket event handlers (handles both camelCase + snake_case)
 registerSocketHandlers(io);
-
-// Inline socket handlers (dev)
-io.on("connection", (socket) => {
-  socket.on("joinRoom", (appointmentId) => {
-    socket.join(appointmentId);
-  });
-
-  socket.on("sendMessage", async (data) => {
-    try {
-      const result = await chatService.sendMessage({
-        appointmentId: data.appointment,
-        senderId: data.sender,
-        senderRole: data.senderRole || socket.user?.role,
-        message: data.message,
-      });
-      if (result.status === 201) {
-        io.to(data.appointment).emit("newMessage", result.data.chat);
-      } else {
-        socket.emit("error", { message: result.data.message });
-      }
-    } catch (err) {
-      socket.emit("error", { message: "Failed to send message" });
-    }
-  });
-});
 
 // Make io accessible in routes/controllers if needed
 app.set("io", io);

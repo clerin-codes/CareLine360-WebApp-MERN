@@ -55,6 +55,7 @@ import PatientRecordsModal from "../../components/dashboard/PatientRecordsModal"
 import PrescriptionModal from "../../components/dashboard/PrescriptionModal";
 import AvailabilityCalendar from "../../components/dashboard/AvailabilityCalendar";
 import ChatWidget from "../../components/dashboard/ChatWidget";
+import AppointmentDetailModal from "../../components/dashboard/AppointmentDetailModal";
 import AnalyticsDonutChart from "../../components/dashboard/AnalyticsDonutChart";
 import AnalyticsBarChart from "../../components/dashboard/AnalyticsBarChart";
 import { useDoctorContext } from "../../components/layout/DashboardLayout";
@@ -927,6 +928,7 @@ export default function DashboardPage({
   const [prescripModal, setPrescripModal] = useState(null);
   const [patientRecordsModal, setPatientRecordsModal] = useState(null); // { patientId, patientName }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null); // appointmentId pending delete
+  const [detailAppt, setDetailAppt] = useState(null); // appointment for detail modal
 
   // ── Meetings ──────────────────────────────────────────────────────────────
   const [meetings, setMeetings] = useState([]);
@@ -1650,6 +1652,7 @@ export default function DashboardPage({
                     patientName: a.patientProfile?.fullName,
                   })
                 }
+                onViewDetail={(a) => setDetailAppt(a)}
                 onViewAll={() => setSection("Appointments")}
               />
             </motion.div>
@@ -1802,6 +1805,7 @@ export default function DashboardPage({
                   patientName: a.patientProfile?.fullName,
                 })
               }
+              onViewDetail={(a) => setDetailAppt(a)}
               title="Appointments List"
               showDate
             />
@@ -2986,6 +2990,24 @@ export default function DashboardPage({
         )}
 
         {/* ── MODALS ──────────────────────────────────────────────────────── */}
+        {detailAppt && (
+          <AppointmentDetailModal
+            appointmentId={detailAppt._id}
+            onClose={() => setDetailAppt(null)}
+            onConfirm={(id) => {
+              handleStatusChange(id, "confirmed");
+              setDetailAppt(null);
+            }}
+            onComplete={(id) => {
+              handleStatusChange(id, "completed");
+              setDetailAppt(null);
+            }}
+            onChat={(a) => {
+              setChatAppt(a);
+              setDetailAppt(null);
+            }}
+          />
+        )}
         {recordModal && (
           <MedicalRecordModal
             patientId={recordModal.patientId}
