@@ -2263,22 +2263,6 @@ export default function DashboardPage({
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={handleTestEmail}
-                  disabled={testEmailLoading}
-                  title="Send a test email to verify SMTP is working"
-                  className="h-9 px-3 rounded-xl border border-teal-500 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-xs font-semibold transition-colors disabled:opacity-50"
-                >
-                  {testEmailLoading ? "Sending…" : "✉ Test Email"}
-                </button>
-                <button
-                  onClick={handleTriggerReminder}
-                  disabled={reminderLoading}
-                  title="Manually fire the 10-min reminder check now"
-                  className="h-9 px-3 rounded-xl border border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-xs font-semibold transition-colors disabled:opacity-50"
-                >
-                  {reminderLoading ? "Checking…" : "⏰ Trigger Reminder"}
-                </button>
-                <button
                   onClick={loadMeetings}
                   className="h-9 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors shadow-md shadow-teal-600/20"
                 >
