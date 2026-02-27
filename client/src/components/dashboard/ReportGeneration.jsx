@@ -20,7 +20,6 @@ import {
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 
 /* ──────────────────────────────────────────────────────────── */
 /*  CATEGORY DEFINITIONS                                       */
@@ -175,132 +174,289 @@ const ReportGeneration = () => {
     }
   }, [category, fromDate, toDate, format, selectedCat]);
 
-  /* ── Patch oklch → rgb so html2canvas can parse all colors ── */
-  /* ── Export PDF ── */
+  /* ── Export PDF (pure jsPDF — no html2canvas) ── */
   const exportPdf = async () => {
-    if (!reportRef.current) return;
+    if (!reportData) return;
     setGenerating(true);
     try {
-      const oklchRe = /oklch\([^)]*\)/gi;
-
-      // Convert an oklch() string → rgb() via the canvas pixel trick
-      const resolveColor = (raw) => {
-        const c = document.createElement("canvas");
-        c.width = c.height = 1;
-        const ctx = c.getContext("2d");
-        ctx.fillStyle = raw;
-        ctx.fillRect(0, 0, 1, 1);
-        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-        return a < 255
-          ? `rgba(${r},${g},${b},${(a / 255).toFixed(3)})`
-          : `rgb(${r},${g},${b})`;
-      };
-
-      const patchVal = (v) =>
-        v && oklchRe.test(v) ? v.replace(oklchRe, (m) => resolveColor(m)) : v;
-
-      const sourceEl = reportRef.current;
-
-      const canvas = await html2canvas(sourceEl, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        windowWidth: sourceEl.scrollWidth,
-        onclone: (clonedDoc, clonedEl) => {
-          // 1) Remove ALL stylesheets so html2canvas never parses oklch
-          clonedDoc
-            .querySelectorAll('link[rel="stylesheet"], style')
-            .forEach((el) => el.remove());
-
-          // 2) Inline every computed style (with oklch→rgb) on each element
-          const inlineAll = (srcEl, clnEl) => {
-            const cs = getComputedStyle(srcEl);
-            for (let i = 0; i < cs.length; i++) {
-              const prop = cs[i];
-              clnEl.style.setProperty(
-                prop,
-                patchVal(cs.getPropertyValue(prop)),
-              );
-            }
-            for (let i = 0; i < srcEl.children.length; i++) {
-              if (clnEl.children[i])
-                inlineAll(srcEl.children[i], clnEl.children[i]);
-            }
-          };
-          inlineAll(sourceEl, clonedEl);
-        },
-      });
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
       const pw = pdf.internal.pageSize.getWidth();
       const ph = pdf.internal.pageSize.getHeight();
-      const imgW = pw - 20;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      const margin = 10;
+      const margin = 14;
+      const contentW = pw - margin * 2;
+      let y = 0;
 
-      // Teal header
+      /* ── helpers ── */
+      const checkPage = (need = 12) => {
+        if (y + need > ph - 10) {
+          addFooter(pdf, pw, ph);
+          pdf.addPage();
+          y = margin;
+        }
+      };
+
+      const addFooter = (doc, w, h) => {
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, h - 12, w - margin, h - 12);
+        doc.setFontSize(7);
+        doc.setTextColor(160, 160, 160);
+        doc.setFont("helvetica", "normal");
+        doc.text("CareLine360 Automated Report - Confidential", margin, h - 8);
+        doc.text(
+          `Page ${doc.internal.getNumberOfPages()}`,
+          w - margin,
+          h - 8,
+          { align: "right" },
+        );
+      };
+
+      const sectionTitle = (title) => {
+        checkPage(14);
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(13, 148, 136);
+        pdf.text(title, margin, y);
+        y += 2;
+        pdf.setDrawColor(13, 148, 136);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, y, margin + pdf.getTextWidth(title), y);
+        y += 6;
+      };
+
+      const statCard = (label, value, x, w) => {
+        pdf.setFillColor(248, 250, 252);
+        pdf.roundedRect(x, y, w, 18, 2, 2, "F");
+        pdf.setDrawColor(226, 232, 240);
+        pdf.roundedRect(x, y, w, 18, 2, 2, "S");
+        pdf.setFontSize(14);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(30, 41, 59);
+        const valStr = String(value ?? "N/A");
+        pdf.text(valStr, x + w / 2, y + 8, { align: "center" });
+        pdf.setFontSize(6.5);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(label.toUpperCase(), x + w / 2, y + 14, { align: "center" });
+      };
+
+      const drawTable = (headers, rows) => {
+        const colW = contentW / headers.length;
+        const rowH = 7;
+
+        // header row
+        checkPage(rowH + 4);
+        pdf.setFillColor(248, 250, 252);
+        pdf.rect(margin, y, contentW, rowH, "F");
+        pdf.setFontSize(7);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(100, 116, 139);
+        headers.forEach((h, i) => {
+          pdf.text(
+            h.toUpperCase(),
+            margin + i * colW + 3,
+            y + rowH / 2 + 1,
+          );
+        });
+        y += rowH;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(margin, y, margin + contentW, y);
+
+        // data rows
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(51, 65, 85);
+        rows.forEach((row) => {
+          checkPage(rowH);
+          row.forEach((cell, i) => {
+            const cellStr = String(cell ?? "").substring(0, 30);
+            pdf.text(cellStr, margin + i * colW + 3, y + rowH / 2 + 1);
+          });
+          y += rowH;
+          pdf.setDrawColor(241, 245, 249);
+          pdf.line(margin, y, margin + contentW, y);
+        });
+        y += 4;
+      };
+
+      const kvGrid = (entries, cols = 4) => {
+        const cardW = (contentW - (cols - 1) * 4) / cols;
+        let col = 0;
+        entries.forEach(([label, value]) => {
+          if (col === 0) checkPage(20);
+          const cx = margin + col * (cardW + 4);
+          pdf.setFillColor(248, 250, 252);
+          pdf.roundedRect(cx, y, cardW, 16, 2, 2, "F");
+          pdf.setDrawColor(226, 232, 240);
+          pdf.roundedRect(cx, y, cardW, 16, 2, 2, "S");
+          pdf.setFontSize(6);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(100, 116, 139);
+          pdf.text(String(label).toUpperCase().substring(0, 20), cx + cardW / 2, y + 5, {
+            align: "center",
+          });
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(30, 41, 59);
+          pdf.text(String(value ?? 0), cx + cardW / 2, y + 12.5, {
+            align: "center",
+          });
+          col++;
+          if (col >= cols) {
+            col = 0;
+            y += 20;
+          }
+        });
+        if (col > 0) y += 20;
+      };
+
+      /* ══════ PAGE HEADER ══════ */
       pdf.setFillColor(13, 148, 136);
-      pdf.rect(0, 0, pw, 28, "F");
+      pdf.rect(0, 0, pw, 30, "F");
+      pdf.setFillColor(15, 118, 110);
+      pdf.rect(0, 30, pw, 4, "F");
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
+      pdf.setFontSize(18);
       pdf.setFont("helvetica", "bold");
-      pdf.text(`CareLine360 - ${selectedCat.label} Report`, margin, 12);
+      pdf.text(`CareLine360 - ${selectedCat.label} Report`, margin, 14);
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 20);
-      pdf.text(`Period: ${fromDate} to ${toDate}`, margin, 25);
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 21);
+      pdf.text(`Period: ${fromDate} to ${toDate}`, margin, 27);
+      y = 42;
 
-      const yOff = 32;
-      const firstPageH = ph - yOff - 5;
-      const subsequentH = ph - 2 * margin;
+      const d = reportData;
+      const s = d.summary || {};
 
-      if (imgH <= firstPageH) {
-        pdf.addImage(imgData, "PNG", margin, yOff, imgW, imgH);
-      } else {
-        // Slice the canvas into page-sized chunks
-        const srcW = canvas.width;
-        const srcH = canvas.height;
-        const pxPerMm = srcW / imgW;
+      /* ══════ APPOINTMENTS ══════ */
+      if (d.category === "appointments") {
+        sectionTitle("Appointment Summary");
+        const cardW = (contentW - 12) / 4;
+        [
+          ["Total Appointments", s.totalAppointments],
+          ["Completion Rate", s.completionRate],
+          ["Cancellation Rate", s.cancellationRate],
+          ["Period Days", d.period?.days],
+        ].forEach(([l, v], i) => statCard(l, v, margin + i * (cardW + 4), cardW));
+        y += 22;
 
-        let srcYOffset = 0;
-        let pageNum = 0;
-
-        while (srcYOffset < srcH) {
-          if (pageNum > 0) pdf.addPage();
-          const availH = pageNum === 0 ? firstPageH : subsequentH;
-          const sliceSrcH = Math.min(
-            Math.round(availH * pxPerMm),
-            srcH - srcYOffset,
-          );
-          const sliceMmH = sliceSrcH / pxPerMm;
-
-          // Create a temporary canvas for this slice
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = srcW;
-          sliceCanvas.height = sliceSrcH;
-          const ctx = sliceCanvas.getContext("2d");
-          ctx.drawImage(
-            canvas,
-            0,
-            srcYOffset,
-            srcW,
-            sliceSrcH,
-            0,
-            0,
-            srcW,
-            sliceSrcH,
-          );
-
-          const sliceImg = sliceCanvas.toDataURL("image/png");
-          const posY = pageNum === 0 ? yOff : margin;
-          pdf.addImage(sliceImg, "PNG", margin, posY, imgW, sliceMmH);
-
-          srcYOffset += sliceSrcH;
-          pageNum++;
+        if (s.statusBreakdown) {
+          sectionTitle("Status Breakdown");
+          kvGrid(Object.entries(s.statusBreakdown), 4);
+        }
+        if (s.consultationTypeBreakdown) {
+          sectionTitle("Consultation Types");
+          kvGrid(Object.entries(s.consultationTypeBreakdown), 3);
+        }
+        if (d.records?.length > 0) {
+          sectionTitle(`Appointment Records (${d.records.length})`);
+          const tableRows = d.records.slice(0, 100).map((r) => [
+            r.date ? new Date(r.date).toLocaleDateString() : "",
+            r.time || "",
+            r.patient || "",
+            r.doctor || "",
+            r.type || "",
+            r.status || "",
+          ]);
+          drawTable(["Date", "Time", "Patient", "Doctor", "Type", "Status"], tableRows);
         }
       }
+
+      /* ══════ EMERGENCIES ══════ */
+      if (d.category === "emergencies") {
+        sectionTitle("Emergency Summary");
+        const cardW = (contentW - 12) / 4;
+        [
+          ["Total Emergencies", s.totalEmergencies],
+          ["Avg Response Time", `${s.avgResponseTimeMinutes ?? "N/A"} min`],
+          ["Resolution Rate", s.resolutionRate],
+          ["Period Days", d.period?.days],
+        ].forEach(([l, v], i) => statCard(l, v, margin + i * (cardW + 4), cardW));
+        y += 22;
+
+        if (s.statusBreakdown) {
+          sectionTitle("Emergency Status Distribution");
+          kvGrid(Object.entries(s.statusBreakdown), 4);
+        }
+        if (s.districtDistribution) {
+          sectionTitle("District Distribution");
+          kvGrid(Object.entries(s.districtDistribution), 3);
+        }
+      }
+
+      /* ══════ PATIENTS ══════ */
+      if (d.category === "patients") {
+        sectionTitle("Patient Summary");
+        checkPage(22);
+        pdf.setFillColor(240, 253, 250);
+        pdf.roundedRect(margin, y, contentW, 20, 3, 3, "F");
+        pdf.setDrawColor(153, 246, 228);
+        pdf.roundedRect(margin, y, contentW, 20, 3, 3, "S");
+        pdf.setFontSize(20);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(15, 118, 110);
+        pdf.text(String(s.totalPatients ?? 0), pw / 2, y + 10, { align: "center" });
+        pdf.setFontSize(7);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(13, 148, 136);
+        pdf.text("TOTAL PATIENTS", pw / 2, y + 16, { align: "center" });
+        y += 26;
+
+        if (s.genderDistribution) {
+          sectionTitle("Gender Distribution");
+          kvGrid(Object.entries(s.genderDistribution), 3);
+        }
+        if (s.bloodGroupDistribution) {
+          sectionTitle("Blood Group Distribution");
+          kvGrid(Object.entries(s.bloodGroupDistribution), 4);
+        }
+        if (s.topChronicConditions?.length > 0) {
+          sectionTitle("Top Chronic Conditions");
+          drawTable(
+            ["Condition", "Count"],
+            s.topChronicConditions.map((c) => [c.name, c.count]),
+          );
+        }
+        if (s.districtDistribution) {
+          sectionTitle("District-wise Distribution");
+          kvGrid(Object.entries(s.districtDistribution), 3);
+        }
+      }
+
+      /* ══════ DOCTORS ══════ */
+      if (d.category === "doctors") {
+        sectionTitle("Doctor Summary");
+        const cardW = (contentW - 8) / 3;
+        [
+          ["Total Doctors", s.totalDoctors],
+          ["Avg Rating", `${s.avgRating ?? "N/A"} / 5`],
+          ["Avg Consultation Fee", `Rs. ${s.avgConsultationFee ?? "N/A"}`],
+        ].forEach(([l, v], i) => statCard(l, v, margin + i * (cardW + 4), cardW));
+        y += 22;
+
+        if (s.specializationDistribution) {
+          sectionTitle("Specialization Distribution");
+          kvGrid(Object.entries(s.specializationDistribution), 3);
+        }
+      }
+
+      /* ══════ TRENDS ══════ */
+      if (d.category === "trends") {
+        [
+          { key: "emergencyTrend", title: "Emergency Trend" },
+          { key: "appointmentTrend", title: "Appointment Trend" },
+          { key: "userGrowthTrend", title: "User Growth Trend" },
+        ].forEach((trend) => {
+          if (d[trend.key]?.length > 0) {
+            sectionTitle(trend.title);
+            drawTable(
+              ["Month", "Count"],
+              d[trend.key].map((m) => [m.month, m.count]),
+            );
+          }
+        });
+      }
+
+      /* ══════ FOOTER on last page ══════ */
+      addFooter(pdf, pw, ph);
 
       pdf.save(`CareLine360_${selectedCat.label}_${fromDate}_${toDate}.pdf`);
       toast.success("PDF downloaded");
@@ -354,8 +510,9 @@ const ReportGeneration = () => {
 
   /* ── Compositing = generate + export ── */
   const handleComposite = async () => {
-    if (!reportData) {
-      // Generate first, then wait for next tick so DOM renders the preview
+    let data = reportData;
+    if (!data) {
+      // Generate first
       setGenerating(true);
       try {
         const res = await api.post("/admin/reports/generate", {
@@ -363,7 +520,7 @@ const ReportGeneration = () => {
           fromDate,
           toDate,
         });
-        const data = res.data.data;
+        data = res.data.data;
         setReportData(data);
         setReportMeta({
           category: selectedCat.label,
@@ -371,18 +528,13 @@ const ReportGeneration = () => {
           telemetryDelta: `${fromDate}  -  ${toDate}`,
         });
         toast.success("Report generated successfully");
-        // Wait for React to render the preview DOM
-        await new Promise((r) => setTimeout(r, 500));
-        setGenerating(false);
-        // Now export
-        if (format === "pdf") await exportPdf();
-        else exportCsv();
       } catch (err) {
         console.error(err);
         toast.error("Failed to generate report");
         setGenerating(false);
+        return;
       }
-      return;
+      setGenerating(false);
     }
     if (format === "pdf") await exportPdf();
     else exportCsv();
