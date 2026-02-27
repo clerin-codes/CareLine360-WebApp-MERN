@@ -8,17 +8,14 @@ const { calcPatientProfileStrength } = require("../services/profileStrength");
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-const model = genAI.getGenerativeModel({
-  model: "models/gemini-flash-latest"
-});
-
 const getMyProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const patient = await Patient.findOne({ userId ,  $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],});
+    const patient = await Patient.findOne({
+      userId,
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    });
     if (!patient) return res.status(404).json({ message: "Profile not found" });
 
     const user = await User.findById(userId).select("email isVerified role");
@@ -84,7 +81,9 @@ const updateMyProfile = async (req, res) => {
     // fullName basic check (optional)
     if (fullName !== undefined) {
       if (typeof fullName !== "string" || fullName.trim().length < 3) {
-        return res.status(400).json({ message: "Full name must be at least 3 characters" });
+        return res
+          .status(400)
+          .json({ message: "Full name must be at least 3 characters" });
       }
     }
 
@@ -112,7 +111,9 @@ const updateMyProfile = async (req, res) => {
       const nicStr = String(nic).trim();
       const nicRegex = /^[0-9]{9}[vVxX]$|^[0-9]{12}$/;
       if (!nicRegex.test(nicStr)) {
-        return res.status(400).json({ message: "Invalid NIC format (123456789V or 200012345678)" });
+        return res
+          .status(400)
+          .json({ message: "Invalid NIC format (123456789V or 200012345678)" });
       }
     }
 
@@ -121,29 +122,51 @@ const updateMyProfile = async (req, res) => {
       if (typeof address !== "object" || Array.isArray(address)) {
         return res.status(400).json({ message: "Address must be an object" });
       }
-      if (address.city !== undefined && String(address.city).trim().length === 0) {
+      if (
+        address.city !== undefined &&
+        String(address.city).trim().length === 0
+      ) {
         return res.status(400).json({ message: "City cannot be empty" });
       }
-      if (address.district !== undefined && String(address.district).trim().length === 0) {
+      if (
+        address.district !== undefined &&
+        String(address.district).trim().length === 0
+      ) {
         return res.status(400).json({ message: "District cannot be empty" });
       }
-      if (address.line1 !== undefined && String(address.line1).trim().length === 0) {
-        return res.status(400).json({ message: "Address line cannot be empty" });
+      if (
+        address.line1 !== undefined &&
+        String(address.line1).trim().length === 0
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Address line cannot be empty" });
       }
     }
 
     // Emergency contact validation (if provided)
     if (emergencyContact !== undefined) {
-      if (typeof emergencyContact !== "object" || Array.isArray(emergencyContact)) {
-        return res.status(400).json({ message: "Emergency contact must be an object" });
+      if (
+        typeof emergencyContact !== "object" ||
+        Array.isArray(emergencyContact)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Emergency contact must be an object" });
       }
 
-      if (emergencyContact.phone !== undefined && emergencyContact.phone !== null && emergencyContact.phone !== "") {
+      if (
+        emergencyContact.phone !== undefined &&
+        emergencyContact.phone !== null &&
+        emergencyContact.phone !== ""
+      ) {
         const p = String(emergencyContact.phone).replace(/\s+/g, "");
         // basic Sri Lanka-ish pattern: allow +94 / 0 / plain 9–10 digits
         const phoneRegex = /^(?:\+94|0)?\d{9}$/;
         if (!phoneRegex.test(p)) {
-          return res.status(400).json({ message: "Invalid emergency phone number" });
+          return res
+            .status(400)
+            .json({ message: "Invalid emergency phone number" });
         }
       }
     }
@@ -153,7 +176,9 @@ const updateMyProfile = async (req, res) => {
       const bg = String(bloodGroup).trim();
       const bgRegex = /^(A|B|AB|O)[+-]$/i;
       if (!bgRegex.test(bg)) {
-        return res.status(400).json({ message: "Invalid blood group (A+, O-, AB+)" });
+        return res
+          .status(400)
+          .json({ message: "Invalid blood group (A+, O-, AB+)" });
       }
     }
 
@@ -162,20 +187,26 @@ const updateMyProfile = async (req, res) => {
       return res.status(400).json({ message: "Allergies must be an array" });
     }
     if (chronicConditions !== undefined && !Array.isArray(chronicConditions)) {
-      return res.status(400).json({ message: "Chronic conditions must be an array" });
+      return res
+        .status(400)
+        .json({ message: "Chronic conditions must be an array" });
     }
 
     // Height/Weight validation
     if (heightCm !== undefined) {
       const h = Number(heightCm);
       if (Number.isNaN(h) || h < 30 || h > 250) {
-        return res.status(400).json({ message: "Height must be between 30 and 250 cm" });
+        return res
+          .status(400)
+          .json({ message: "Height must be between 30 and 250 cm" });
       }
     }
     if (weightKg !== undefined) {
       const w = Number(weightKg);
       if (Number.isNaN(w) || w < 2 || w > 300) {
-        return res.status(400).json({ message: "Weight must be between 2 and 300 kg" });
+        return res
+          .status(400)
+          .json({ message: "Weight must be between 2 and 300 kg" });
       }
     }
     // ---------------- END VALIDATION ----------------
@@ -199,13 +230,16 @@ const updateMyProfile = async (req, res) => {
     if (req.body.emergencyContact) {
       update["emergencyContact.name"] = req.body.emergencyContact.name;
       update["emergencyContact.phone"] = req.body.emergencyContact.phone;
-      update["emergencyContact.relationship"] = req.body.emergencyContact.relationship;
+      update["emergencyContact.relationship"] =
+        req.body.emergencyContact.relationship;
     }
 
     // Medical
-    if (req.body.bloodGroup !== undefined) update.bloodGroup = req.body.bloodGroup;
+    if (req.body.bloodGroup !== undefined)
+      update.bloodGroup = req.body.bloodGroup;
     if (req.body.allergies !== undefined) update.allergies = req.body.allergies;
-    if (req.body.chronicConditions !== undefined) update.chronicConditions = req.body.chronicConditions;
+    if (req.body.chronicConditions !== undefined)
+      update.chronicConditions = req.body.chronicConditions;
     if (req.body.heightCm !== undefined) update.heightCm = req.body.heightCm;
     if (req.body.weightKg !== undefined) update.weightKg = req.body.weightKg;
 
@@ -215,7 +249,7 @@ const updateMyProfile = async (req, res) => {
         $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
       },
       { $set: update },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!patient) return res.status(404).json({ message: "Profile not found" });
@@ -245,9 +279,12 @@ const uploadAvatar = async (req, res) => {
     console.log("avatarUrl =", avatarUrl); // ✅ add this
 
     const patient = await Patient.findOneAndUpdate(
-      { userId , $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }], },
-      { $set: { avatarUrl }  },
-      { returnDocument: "after", runValidators: true }
+      {
+        userId,
+        $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+      },
+      { $set: { avatarUrl } },
+      { returnDocument: "after", runValidators: true },
     );
 
     if (!patient) return res.status(404).json({ message: "Profile not found" });
@@ -273,7 +310,7 @@ const deactivateMyAccount = async (req, res) => {
           refreshTokenHash: null,
         },
       },
-      { returnDocument: "after" } // mongoose v7+ (instead of { new: true })
+      { returnDocument: "after" }, // mongoose v7+ (instead of { new: true })
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -282,7 +319,7 @@ const deactivateMyAccount = async (req, res) => {
     await Patient.findOneAndUpdate(
       { userId },
       { $set: { isDeleted: true } },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
 
     return res.json({ message: "Account deactivated successfully" });
@@ -302,16 +339,17 @@ const medicalRecord = async (req, res) => {
       $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
     });
 
-    if (!patient) return res.status(404).json({ message: "Patient profile not found" });
+    if (!patient)
+      return res.status(404).json({ message: "Patient profile not found" });
 
     // 2) fetch medical records
     const histories = await MedicalRecord.find({
       patientId: patient._id,
       isDeleted: false,
     })
-      .populate("doctorId")          // returns Doctor document (fullName, specialization, etc.)
-      .populate("appointmentId")     // if linked later
-      .populate("prescriptionId")    // if linked later
+      .populate("doctorId") // returns Doctor document (fullName, specialization, etc.)
+      .populate("appointmentId") // if linked later
+      .populate("prescriptionId") // if linked later
       .sort({ visitDate: -1 });
 
     return res.json({ histories });
@@ -329,6 +367,16 @@ const explainMedicalText = async (req, res) => {
       return res.status(400).json({ message: "Text is required" });
     }
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ message: "Gemini API key not configured" });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // gemini-2.0-flash-lite has a separate (more generous) free-tier quota bucket
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+
     // Default language = English
     const selectedLanguage = language || "english";
 
@@ -344,22 +392,39 @@ const explainMedicalText = async (req, res) => {
       Do NOT change dosage.
       Only explain meaning clearly.
 
-      ${text}`
+      ${text}`,
     );
 
     const explanation = result.response.text();
 
     return res.json({
       language: selectedLanguage,
-      explanation
+      explanation,
     });
-
   } catch (error) {
-    console.error("GEMINI ERROR:", error);
-    return res.status(500).json({ message: "AI service error" });
+    console.error("GEMINI ERROR:", error?.message || error);
+
+    // Detect quota / rate-limit errors (HTTP 429 from Google's API)
+    const errMsg = error?.message || "";
+    const isQuota =
+      errMsg.includes("429") ||
+      errMsg.includes("Too Many Requests") ||
+      errMsg.includes("quota") ||
+      errMsg.includes("RESOURCE_EXHAUSTED");
+
+    if (isQuota) {
+      return res.status(429).json({
+        message: "AI quota exceeded. Please try again in a few minutes.",
+        detail: errMsg,
+      });
+    }
+
+    return res.status(500).json({
+      message: "AI service error",
+      detail: errMsg || "Unknown error",
+    });
   }
 };
-
 
 /**
  * GET /api/patient/me/medical-records
@@ -372,12 +437,13 @@ const getMyMedicalRecords = async (req, res) => {
     const records = await MedicalRecord.find({
       patientId,
       isDeleted: false,
-    })
-      .sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 });
 
     return res.json({ count: records.length, records });
   } catch (err) {
-    return res.status(500).json({ message: "Failed to fetch medical records", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch medical records", error: err.message });
   }
 };
 
@@ -389,12 +455,15 @@ const getMyPrescriptions = async (req, res) => {
   try {
     const patientId = req.user.userId;
 
-    const prescriptions = await Prescription.find({ patientId })
-      .sort({ createdAt: -1 });
+    const prescriptions = await Prescription.find({ patientId }).sort({
+      createdAt: -1,
+    });
 
     return res.json({ count: prescriptions.length, prescriptions });
   } catch (err) {
-    return res.status(500).json({ message: "Failed to fetch prescriptions", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch prescriptions", error: err.message });
   }
 };
 
@@ -416,7 +485,9 @@ const getAllDoctorsForPatient = async (req, res) => {
     }
 
     const doctors = await Doctor.find(filter)
-      .select("fullName specialization phone avatarUrl qualifications experience bio consultationFee rating totalRatings availabilitySlots doctorId licenseNumber")
+      .select(
+        "fullName specialization phone avatarUrl qualifications experience bio consultationFee rating totalRatings availabilitySlots doctorId licenseNumber",
+      )
       .sort({ fullName: 1 });
 
     return res.json(doctors);
@@ -427,7 +498,10 @@ const getAllDoctorsForPatient = async (req, res) => {
 
 const getDoctorDetailsForPatient = async (req, res) => {
   try {
-    const doc = await Doctor.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
+    const doc = await Doctor.findOne({
+      _id: req.params.id,
+      isDeleted: { $ne: true },
+    });
 
     if (!doc) return res.status(404).json({ message: "Doctor not found" });
 
@@ -463,10 +537,13 @@ const getAllHospitalsForPatient = async (req, res) => {
 
 const getHospitalDetailsForPatient = async (req, res) => {
   try {
-    const hospital = await Hospital.findOne({ _id: req.params.id, isActive: true })
-      .select("name address contact lat lng isActive");
+    const hospital = await Hospital.findOne({
+      _id: req.params.id,
+      isActive: true,
+    }).select("name address contact lat lng isActive");
 
-    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+    if (!hospital)
+      return res.status(404).json({ message: "Hospital not found" });
 
     res.json(hospital);
   } catch (e) {
@@ -475,24 +552,23 @@ const getHospitalDetailsForPatient = async (req, res) => {
 };
 
 const createEmergency = async (req, res, next) => {
-    try {
-        const emergency = await emergencyService.createEmergency({
-            ...req.body,
-            patient: req.user.id,   // 👈 take patient from token
-        });
+  try {
+    const emergency = await emergencyService.createEmergency({
+      ...req.body,
+      patient: req.user.id, // 👈 take patient from token
+    });
 
-        res.status(201).json({ success: true, data: emergency });
-    } catch (error) {
-        next(error);
-    }
+    res.status(201).json({ success: true, data: emergency });
+  } catch (error) {
+    next(error);
+  }
 };
 
-
-module.exports = { 
-  getMyProfile, 
-  updateMyProfile , 
-  uploadAvatar , 
-  deactivateMyAccount, 
+module.exports = {
+  getMyProfile,
+  updateMyProfile,
+  uploadAvatar,
+  deactivateMyAccount,
   medicalRecord,
   explainMedicalText,
   getMyMedicalRecords,
