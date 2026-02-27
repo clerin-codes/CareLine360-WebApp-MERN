@@ -110,22 +110,4 @@ router.post(
   createEmergency
 );
 
-// Get appointments for a specific patient (for doctors)
-router.get(
-  "/:patientId/appointment",
-  authMiddleware,
-  roleMiddleware(["doctor"]),
-  getAllPatientAppointments
-);
-
-// Get ratings for a specific patient (for doctors)
-router.get(
-  "/:patientId/rating",
-  authMiddleware,
-  roleMiddleware(["doctor"]),
-  getPatientRatings
-);
-
-
-
 module.exports = router;
