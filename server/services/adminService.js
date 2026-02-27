@@ -150,10 +150,10 @@ const toggleUserStatus = async (id) => {
   user.status = newStatus;
   await user.save();
 
-  // Notify user about status change
-  try {
-    const statusLabel = newStatus === "ACTIVE" ? "activated" : "suspended";
-    await notifyUser(user, {
+  // Notify user about status change (fire-and-forget, non-blocking)
+  const statusLabel = newStatus === "ACTIVE" ? "activated" : "suspended";
+  setImmediate(() => {
+    notifyUser(user, {
       subject: `Account ${statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)} - CareLine360`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
@@ -170,10 +170,8 @@ const toggleUserStatus = async (id) => {
         </div>
       `,
       smsText: `CareLine360: Your account has been ${statusLabel}. ${newStatus === "ACTIVE" ? "You can now log in." : "Contact support if you need help."}`,
-    });
-  } catch (err) {
-    console.error("Status change notification error:", err.message);
-  }
+    }).catch((err) => console.error("Status change notification error:", err.message));
+  });
 
   return { status: 200, data: user };
 };
@@ -331,26 +329,29 @@ const updateUserStatus = async ({ userId, status }) => {
       msg: "",
     };
 
-    await notifyUser(user, {
-      subject: `Account ${sm.label.charAt(0).toUpperCase() + sm.label.slice(1)} - CareLine360`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
-          <div style="background:linear-gradient(135deg,#0d9488,#0f766e);padding:24px;border-radius:12px 12px 0 0;text-align:center">
-            <h2 style="color:#fff;margin:0">CareLine360</h2>
+    // Send notification in background (fire-and-forget, non-blocking)
+    setImmediate(() => {
+      notifyUser(user, {
+        subject: `Account ${sm.label.charAt(0).toUpperCase() + sm.label.slice(1)} - CareLine360`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
+            <div style="background:linear-gradient(135deg,#0d9488,#0f766e);padding:24px;border-radius:12px 12px 0 0;text-align:center">
+              <h2 style="color:#fff;margin:0">CareLine360</h2>
+            </div>
+            <div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
+              <p>Dear <strong>${user.fullName || "User"}</strong>,</p>
+              <p>Your CareLine360 account has been <strong style="color:${sm.color}">${sm.label}</strong>.</p>
+              <p>${sm.msg}</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
+              <p style="font-size:12px;color:#94a3b8">This is an automated notification from CareLine360.</p>
+            </div>
           </div>
-          <div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
-            <p>Dear <strong>${user.fullName || "User"}</strong>,</p>
-            <p>Your CareLine360 account has been <strong style="color:${sm.color}">${sm.label}</strong>.</p>
-            <p>${sm.msg}</p>
-            <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
-            <p style="font-size:12px;color:#94a3b8">This is an automated notification from CareLine360.</p>
-          </div>
-        </div>
-      `,
-      smsText: `CareLine360: Your account has been ${sm.label}. ${sm.msg}`,
+        `,
+        smsText: `CareLine360: Your account has been ${sm.label}. ${sm.msg}`,
+      }).catch((err) => console.error("Status change notification error:", err.message));
     });
   } catch (err) {
-    console.error("Status change notification error:", err.message);
+    console.error("Status update error:", err.message);
   }
 
   return { status: 200, data: { message: "Status updated", user } };
@@ -416,40 +417,40 @@ const createMeetingLink = async (appointmentId) => {
 
   if (!appt) return { status: 404, data: { message: "Appointment not found" } };
 
-  // Notify patient & doctor about the meeting link
-  const dateStr = new Date(appt.date).toLocaleDateString("en-US", {
-    dateStyle: "long",
-  });
-  const meetingHtml = (name, role) => `
-    <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
-      <div style="background:linear-gradient(135deg,#0d9488,#0f766e);padding:24px;border-radius:12px 12px 0 0;text-align:center">
-        <h2 style="color:#fff;margin:0">CareLine360</h2>
-      </div>
-      <div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
-        <p>Dear <strong>${name}</strong>,</p>
-        <p>A meeting link has been generated for your upcoming appointment:</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;color:#64748b;font-size:13px">Date</td><td style="padding:8px;font-weight:bold">${dateStr}</td></tr>
-          <tr><td style="padding:8px;color:#64748b;font-size:13px">Time</td><td style="padding:8px;font-weight:bold">${appt.time}</td></tr>
-          <tr><td style="padding:8px;color:#64748b;font-size:13px">${role === "patient" ? "Doctor" : "Patient"}</td><td style="padding:8px;font-weight:bold">${role === "patient" ? appt.doctor?.fullName : appt.patient?.fullName}</td></tr>
-          <tr><td style="padding:8px;color:#64748b;font-size:13px">Type</td><td style="padding:8px;font-weight:bold">${appt.consultationType}</td></tr>
-        </table>
-        <div style="text-align:center;margin:20px 0">
-          <a href="${meetingUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">Join Meeting</a>
+  // Fire-and-forget: send notifications in background (don't block response)
+  setImmediate(() => {
+    const dateStr = new Date(appt.date).toLocaleDateString("en-US", {
+      dateStyle: "long",
+    });
+    const meetingHtml = (name, role) => `
+      <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#0d9488,#0f766e);padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h2 style="color:#fff;margin:0">CareLine360</h2>
         </div>
-        <p style="font-size:12px;color:#94a3b8;word-break:break-all">Or copy this link: ${meetingUrl}</p>
-        <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
-        <p style="font-size:12px;color:#94a3b8">This is an automated notification from CareLine360.</p>
+        <div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:0 0 12px 12px">
+          <p>Dear <strong>${name}</strong>,</p>
+          <p>A meeting link has been generated for your upcoming appointment:</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr><td style="padding:8px;color:#64748b;font-size:13px">Date</td><td style="padding:8px;font-weight:bold">${dateStr}</td></tr>
+            <tr><td style="padding:8px;color:#64748b;font-size:13px">Time</td><td style="padding:8px;font-weight:bold">${appt.time}</td></tr>
+            <tr><td style="padding:8px;color:#64748b;font-size:13px">${role === "patient" ? "Doctor" : "Patient"}</td><td style="padding:8px;font-weight:bold">${role === "patient" ? appt.doctor?.fullName : appt.patient?.fullName}</td></tr>
+            <tr><td style="padding:8px;color:#64748b;font-size:13px">Type</td><td style="padding:8px;font-weight:bold">${appt.consultationType}</td></tr>
+          </table>
+          <div style="text-align:center;margin:20px 0">
+            <a href="${meetingUrl}" style="display:inline-block;background:#0d9488;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">Join Meeting</a>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;word-break:break-all">Or copy this link: ${meetingUrl}</p>
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
+          <p style="font-size:12px;color:#94a3b8">This is an automated notification from CareLine360.</p>
+        </div>
       </div>
-    </div>
-  `;
-  const meetingSms = (name) =>
-    `CareLine360: Hi ${name}, your appointment meeting link for ${dateStr} at ${appt.time} is ready. Join here: ${meetingUrl}`;
+    `;
+    const meetingSms = (name) =>
+      `CareLine360: Hi ${name}, your appointment meeting link for ${dateStr} at ${appt.time} is ready. Join here: ${meetingUrl}`;
 
-  // Notify patient
-  try {
+    // Notify patient
     if (appt.patient) {
-      await notifyUser(
+      notifyUser(
         {
           email: appt.patient.email,
           phone: appt.patient.phone,
@@ -460,16 +461,12 @@ const createMeetingLink = async (appointmentId) => {
           html: meetingHtml(appt.patient.fullName || "Patient", "patient"),
           smsText: meetingSms(appt.patient.fullName || "Patient"),
         },
-      );
+      ).catch((err) => console.error("Patient meeting notification error:", err.message));
     }
-  } catch (err) {
-    console.error("Patient meeting notification error:", err.message);
-  }
 
-  // Notify doctor
-  try {
+    // Notify doctor
     if (appt.doctor) {
-      await notifyUser(
+      notifyUser(
         {
           email: appt.doctor.email,
           phone: appt.doctor.phone,
@@ -480,11 +477,9 @@ const createMeetingLink = async (appointmentId) => {
           html: meetingHtml(appt.doctor.fullName || "Doctor", "doctor"),
           smsText: meetingSms(appt.doctor.fullName || "Doctor"),
         },
-      );
+      ).catch((err) => console.error("Doctor meeting notification error:", err.message));
     }
-  } catch (err) {
-    console.error("Doctor meeting notification error:", err.message);
-  }
+  });
 
   return { status: 200, data: appt };
 };
