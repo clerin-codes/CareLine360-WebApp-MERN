@@ -693,11 +693,11 @@
   }
 
   /* Prevent the page scrollbar from appearing behind modals */
-  body.modal-open {
-    overflow: hidden;
-  }
+body.modal-open {
+  overflow: hidden;
 }
-  :root {
+
+:root {
     --primary: #0077b6;
     --secondary: #00b4d8;
     --accent: #90e0ef;
