@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:1111";
+const SOCKET_URL = (import.meta.env.VITE_API_URL || "http://localhost:1111").replace("/api", "");
 
 let socket = null;
 
@@ -90,7 +90,7 @@ export const sendChatMessage = (appointmentId, message) => {
  */
 export const emitTyping = (appointmentId) => {
   if (socket?.connected) {
-    socket.emit("typing", { appointmentId });
+    socket.emit("typing", { appointmentId, isTyping: true });
   }
 };
 

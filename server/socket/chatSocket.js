@@ -9,8 +9,8 @@ const authenticateSocket = (socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token) return next(new Error("Authentication error: no token"));
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.user = decoded; // { id, role, ... }
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    socket.user = decoded; // { userId, role, ... }
     next();
   } catch (err) {
     next(new Error("Authentication error: invalid token"));
@@ -26,7 +26,7 @@ const registerSocketHandlers = (io) => {
   io.use(authenticateSocket);
 
   io.on("connection", (socket) => {
-    const { id: userId, role } = socket.user;
+    const { userId, role } = socket.user;
     console.log(
       `🔌 Socket connected: userId=${userId} role=${role} socketId=${socket.id}`,
     );
@@ -87,7 +87,7 @@ const registerSocketHandlers = (io) => {
     socket.on("typing", ({ appointmentId, isTyping }) => {
       socket
         .to(appointmentId)
-        .emit("user_typing", { userId, role, isTyping: !!isTyping });
+        .emit("user_typing", { userId, role, isTyping: !!isTyping, senderRole: role });
     });
 
     /**
@@ -97,7 +97,7 @@ const registerSocketHandlers = (io) => {
     socket.on("stop_typing", ({ appointmentId }) => {
       socket
         .to(appointmentId)
-        .emit("user_typing", { userId, role, isTyping: false });
+        .emit("user_typing", { userId, role, isTyping: false, senderRole: role });
     });
 
     socket.on("disconnect", (reason) => {
