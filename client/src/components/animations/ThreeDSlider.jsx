@@ -5,19 +5,22 @@ const SliderItem = React.forwardRef(({ item, onClick }, ref) => {
   return (
     <div
       ref={ref}
-      className="absolute top-1/2 left-1/2 cursor-pointer select-none rounded-xl 
-                shadow-2xl bg-black pointer-events-auto
-                overflow-hidden will-change-transform"
+      className="absolute cursor-pointer select-none rounded-xl 
+                pointer-events-auto overflow-hidden will-change-transform"
       style={{
-        "--width": "clamp(150px, 30vw, 300px)",
-        "--height": "clamp(200px, 40vw, 400px)",
-        width: "var(--width)",
-        height: "var(--height)",
-        marginTop: "calc(var(--height) / -2)",
-        marginLeft: "calc(var(--width) / -2)",
-        transformOrigin: "0% 100%",
+        width: "calc(var(--grid-size) * 5)",
+        height: "calc(var(--grid-size) * 7)",
+        top: "50%",
+        left: "50%",
+        marginTop: "calc(var(--grid-size) * -3.5)",
+        marginLeft: "calc(var(--grid-size) * -2.5)",
+        transformOrigin: "center center",
         transition: "none",
         display: "block",
+        border: "2px solid rgba(255,255,255,0.35)",
+        boxShadow:
+          "0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+        background: "#000",
       }}
       onClick={onClick}
     >
@@ -262,8 +265,8 @@ const ThreeDSlider = ({
       className="relative w-full overflow-hidden"
       style={{ background: "transparent", ...containerStyle }}
     >
-      <div className="relative z-10 h-[80vh] overflow-hidden pointer-events-none w-full"
-        style={{ transform: "scale(0.75)" }}
+      <div 
+        className="relative z-10 w-full h-full overflow-hidden pointer-events-none"
       >
         {items.map((item, index) => (
           <SliderItem

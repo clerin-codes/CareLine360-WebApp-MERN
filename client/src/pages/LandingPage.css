@@ -113,19 +113,65 @@
 
 /* ─── Feature Card ───────────────────────────── */
 .lp-feature-card {
+  position: relative;
   border-top: 1px solid #1a1a1a;
   padding: 2rem 0;
-  transition: background 0.7s ease-out;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  overflow: hidden;
+}
+.lp-feature-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 30% 0%,
+    rgba(13, 148, 136, 0.08) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+.lp-feature-card:hover::before {
+  opacity: 1;
 }
 .lp-feature-card:hover {
-  background: rgba(249, 248, 246, 0.5);
+  background: rgba(13, 148, 136, 0.03);
+  box-shadow: 0 8px 30px rgba(13, 148, 136, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* ─── Gold accent on hover ───────────────────── */
+/* ─── Hover accent bar (slides in from left) ─── */
+.lp-feature-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0d9488, rgba(13, 148, 136, 0.2));
+  transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.lp-feature-card:hover .lp-feature-accent {
+  width: 100%;
+}
+
+/* ─── Icon hover effects ────────────────────── */
+.lp-feature-icon {
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
 .lp-feature-card:hover .lp-feature-icon {
   color: #0d9488;
   border-color: #0d9488;
-  transition: all 0.5s ease-out;
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 0 20px rgba(13, 148, 136, 0.2);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+/* ─── Title hover color ─────────────────────── */
+.lp-feature-card h3 {
+  transition: color 0.4s ease-out;
+}
+.lp-feature-card:hover h3 {
+  color: #0d9488;
 }
 
 /* ─── Testimonial Card ───────────────────────── */
