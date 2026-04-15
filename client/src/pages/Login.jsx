@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
 import { setAuth } from "../auth/authStorage";
+import { useAuth } from "../context/AuthContext";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -19,15 +20,20 @@ import "./Auth.css";
 
 export default function Login() {
   const nav = useNavigate();
+  const { login } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [canReactivate, setCanReactivate] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
+
   const submit = async (e) => {
     e.preventDefault();
     setMsg("");
+    setCanReactivate(false);
 
     try {
       setLoading(true);
@@ -37,7 +43,15 @@ export default function Login() {
         password,
       });
 
+      // persist tokens to storage so they survive reloads
       setAuth(res.data);
+
+      // notify AuthContext in the same tab so protected routes update immediately
+      try {
+        login({ accessToken: res.data.accessToken, refreshToken: res.data.refreshToken, user: res.data.user });
+      } catch (e) {
+        // if context isn't available for some reason, storage still has tokens
+      }
 
       const role = res.data.user.role;
       if (role === "patient") nav("/patient/dashboard");
@@ -46,10 +60,46 @@ export default function Login() {
       else if (role === "responder") nav("/admin/dashboard/emergencies");
       else nav("/");
     } catch (err) {
-      const apiMsg = err.response?.data?.message;
-      setMsg(apiMsg || "Login failed");
+      const apiMsg = err.response?.data?.message || "Login failed";
+      setMsg(apiMsg);
+
+      // show reactivate button when backend says account inactive
+      const m = apiMsg.toLowerCase();
+      if (
+        m.includes("deactiv") ||
+        m.includes("inactive") ||
+        m.includes("suspend") ||
+        m.includes("disabled")
+      ) {
+        setCanReactivate(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setMsg("");
+
+    if (!identifier.trim() || !password) {
+      setMsg("Enter email/phone and password to reactivate.");
+      return;
+    }
+
+    try {
+      setReactivating(true);
+
+      const res = await api.post("/auth/reactivate", {
+        identifier: identifier.trim(),
+        password,
+      });
+
+      setMsg(res.data?.message || "Account reactivated. Now login again.");
+      setCanReactivate(false);
+    } catch (err) {
+      setMsg(err.response?.data?.message || "Reactivate failed");
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -174,6 +224,30 @@ export default function Login() {
                 )}
               </span>
             </button>
+
+            {/* Reactivate */}
+            {canReactivate && (
+              <button
+                type="button"
+                onClick={handleReactivate}
+                disabled={reactivating}
+                className="auth-submit-btn"
+                style={{ marginTop: "0.75rem" }}
+              >
+                <span className="btn-slide-bg" />
+                <span className="btn-text">
+                  {reactivating ? (
+                    <>
+                      <span className="auth-spinner" /> Reactivating…
+                    </>
+                  ) : (
+                    <>
+                      Reactivate Account <ArrowRight size={14} />
+                    </>
+                  )}
+                </span>
+              </button>
+            )}
           </form>
 
           {/* Divider */}
