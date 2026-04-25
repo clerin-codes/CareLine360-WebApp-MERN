@@ -77,7 +77,9 @@ describe("Doctor Controller – Unit Tests", () => {
     it("should return 404 if profile not found", async () => {
       doctorService.getDoctorProfile.mockResolvedValue({
         status: 404,
-        data: { message: "Doctor profile not found. Please complete your profile." },
+        data: {
+          message: "Doctor profile not found. Please complete your profile.",
+        },
       });
 
       const req = mockReq();
@@ -121,7 +123,7 @@ describe("Doctor Controller – Unit Tests", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringContaining("image") })
+        expect.objectContaining({ message: expect.stringContaining("image") }),
       );
     });
 
@@ -243,7 +245,7 @@ describe("Doctor Controller – Unit Tests", () => {
           page: "1",
           limit: "5",
           search: "John",
-        })
+        }),
       );
     });
   });
@@ -311,7 +313,7 @@ describe("Doctor Controller – Unit Tests", () => {
           userId: "mock-user-id",
           search: "Jane",
           page: "2",
-        })
+        }),
       );
     });
   });
@@ -416,7 +418,7 @@ describe("Doctor Controller – Unit Tests", () => {
       await controller.getPrescriptions(req, res);
 
       expect(doctorService.getMyPrescriptions).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: "mock-user-id", page: "1" })
+        expect.objectContaining({ userId: "mock-user-id", page: "1" }),
       );
     });
   });
@@ -429,7 +431,10 @@ describe("Doctor Controller – Unit Tests", () => {
       await controller.downloadPrescription(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: "url is required" });
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "url is required",
+      });
     });
 
     it("should return 403 for non-Cloudinary URL", async () => {
@@ -441,7 +446,10 @@ describe("Doctor Controller – Unit Tests", () => {
       await controller.downloadPrescription(req, res);
 
       expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({ message: "URL not allowed" });
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "URL not allowed",
+      });
     });
 
     it("should return 400 for invalid URL", async () => {
@@ -451,7 +459,10 @@ describe("Doctor Controller – Unit Tests", () => {
       await controller.downloadPrescription(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: "Invalid URL" });
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Invalid URL",
+      });
     });
   });
 
