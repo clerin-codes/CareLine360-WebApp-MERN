@@ -35,9 +35,9 @@ describe("Admin Module - Integration Tests", () => {
   describe("User Management Workflow", () => {
     test("should create and retrieve multiple users with different roles", async () => {
       const users = await User.create([
-        { email: "patient@example.com", role: "patient" },
-        { email: "doctor@example.com", role: "doctor" },
-        { email: "admin@example.com", role: "admin" },
+        { email: "patient@example.com", role: "patient", passwordHash: "hash123" },
+        { email: "doctor@example.com", role: "doctor", passwordHash: "hash123" },
+        { email: "admin@example.com", role: "admin", passwordHash: "hash123" },
       ]);
 
       expect(users).toHaveLength(3);
@@ -52,6 +52,7 @@ describe("Admin Module - Integration Tests", () => {
         email: "newuser@example.com",
         role: "patient",
         status: "PENDING",
+        passwordHash: "hash123",
       });
 
       // Admin approves user
@@ -69,6 +70,7 @@ describe("Admin Module - Integration Tests", () => {
         email: "suspend@example.com",
         role: "patient",
         status: "ACTIVE",
+        passwordHash: "hash123",
       });
 
       const suspended = await User.findByIdAndUpdate(
@@ -84,6 +86,7 @@ describe("Admin Module - Integration Tests", () => {
       const user = await User.create({
         email: "delete@example.com",
         role: "patient",
+        passwordHash: "hash123",
       });
 
       await User.findByIdAndDelete(user._id);
@@ -98,10 +101,12 @@ describe("Admin Module - Integration Tests", () => {
       const user = await User.create({
         email: "doctor@medical.com",
         role: "doctor",
+        passwordHash: "hash123",
       });
 
       const doctor = await Doctor.create({
         userId: user._id,
+        doctorId: "DOC-000001",
         fullName: "Dr. Smith",
         specialization: "Cardiology",
         licenseNumber: "MED-2024-001",
@@ -122,16 +127,19 @@ describe("Admin Module - Integration Tests", () => {
       await Doctor.create([
         {
           userId: new mongoose.Types.ObjectId(),
+          doctorId: "DOC-000002",
           fullName: "Dr. Johnson",
           status: "PENDING",
         },
         {
           userId: new mongoose.Types.ObjectId(),
+          doctorId: "DOC-000003",
           fullName: "Dr. Williams",
           status: "PENDING",
         },
         {
           userId: new mongoose.Types.ObjectId(),
+          doctorId: "DOC-000004",
           fullName: "Dr. Brown",
           status: "VERIFIED",
         },
@@ -144,6 +152,7 @@ describe("Admin Module - Integration Tests", () => {
     test("should reject doctor application", async () => {
       const doctor = await Doctor.create({
         userId: new mongoose.Types.ObjectId(),
+        doctorId: "DOC-000005",
         fullName: "Dr. Applicant",
         status: "PENDING",
       });
@@ -162,18 +171,27 @@ describe("Admin Module - Integration Tests", () => {
     test("should retrieve all appointments for admin dashboard", async () => {
       await Appointment.create([
         {
-          patientId: new mongoose.Types.ObjectId(),
-          doctorId: new mongoose.Types.ObjectId(),
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "10:00",
+          consultationType: "video",
           status: "pending",
         },
         {
-          patientId: new mongoose.Types.ObjectId(),
-          doctorId: new mongoose.Types.ObjectId(),
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "11:00",
+          consultationType: "video",
           status: "confirmed",
         },
         {
-          patientId: new mongoose.Types.ObjectId(),
-          doctorId: new mongoose.Types.ObjectId(),
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "12:00",
+          consultationType: "video",
           status: "completed",
         },
       ]);
@@ -187,9 +205,30 @@ describe("Admin Module - Integration Tests", () => {
 
     test("should calculate appointment statistics", async () => {
       await Appointment.create([
-        { patientId: new mongoose.Types.ObjectId(), status: "completed" },
-        { patientId: new mongoose.Types.ObjectId(), status: "completed" },
-        { patientId: new mongoose.Types.ObjectId(), status: "cancelled" },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "10:00",
+          consultationType: "video",
+          status: "completed",
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "11:00",
+          consultationType: "video",
+          status: "completed",
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "12:00",
+          consultationType: "video",
+          status: "cancelled",
+        },
       ]);
 
       const completed = await Appointment.countDocuments({
@@ -207,46 +246,67 @@ describe("Admin Module - Integration Tests", () => {
   describe("Emergency Response Management", () => {
     test("should create and track emergency cases", async () => {
       const emergency = await EmergencyCase.create({
-        patientId: new mongoose.Types.ObjectId(),
-        title: "Severe Chest Pain",
+        patient: new mongoose.Types.ObjectId(),
+        description: "Severe Chest Pain",
         severity: "critical",
-        status: "pending",
-        location: { latitude: 6.9271, longitude: 80.7744 },
+        status: "PENDING",
+        latitude: 6.9271,
+        longitude: 80.7744,
       });
 
-      expect(emergency.status).toBe("pending");
+      expect(emergency.status).toBe("PENDING");
       expect(emergency.severity).toBe("critical");
     });
 
     test("should update emergency status through workflow", async () => {
       const emergency = await EmergencyCase.create({
-        patientId: new mongoose.Types.ObjectId(),
-        title: "Emergency",
-        status: "pending",
+        patient: new mongoose.Types.ObjectId(),
+        description: "Emergency",
+        status: "PENDING",
+        latitude: 6.9271,
+        longitude: 80.7744,
       });
 
       // Responder accepts
       let updated = await EmergencyCase.findByIdAndUpdate(
         emergency._id,
-        { status: "responding" },
+        { status: "DISPATCHED" },
         { new: true }
       );
-      expect(updated.status).toBe("responding");
+      expect(updated.status).toBe("DISPATCHED");
 
       // Emergency resolved
       updated = await EmergencyCase.findByIdAndUpdate(
         emergency._id,
-        { status: "resolved" },
+        { status: "RESOLVED" },
         { new: true }
       );
-      expect(updated.status).toBe("resolved");
+      expect(updated.status).toBe("RESOLVED");
     });
 
     test("should retrieve emergencies by severity", async () => {
       await EmergencyCase.create([
-        { patientId: new mongoose.Types.ObjectId(), severity: "critical" },
-        { patientId: new mongoose.Types.ObjectId(), severity: "critical" },
-        { patientId: new mongoose.Types.ObjectId(), severity: "high" },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          severity: "critical",
+          description: "Critical 1",
+          latitude: 6.9,
+          longitude: 80.7,
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          severity: "critical",
+          description: "Critical 2",
+          latitude: 6.9,
+          longitude: 80.7,
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          severity: "high",
+          description: "High 1",
+          latitude: 6.9,
+          longitude: 80.7,
+        },
       ]);
 
       const critical = await EmergencyCase.find({ severity: "critical" });
@@ -258,9 +318,9 @@ describe("Admin Module - Integration Tests", () => {
     test("should calculate system-wide statistics", async () => {
       // Create test data
       await User.create([
-        { email: "user1@example.com", role: "patient" },
-        { email: "user2@example.com", role: "patient" },
-        { email: "user3@example.com", role: "doctor" },
+        { email: "user1@example.com", role: "patient", passwordHash: "hash" },
+        { email: "user2@example.com", role: "patient", passwordHash: "hash" },
+        { email: "user3@example.com", role: "doctor", passwordHash: "hash" },
       ]);
 
       const totalUsers = await User.countDocuments();
@@ -274,10 +334,38 @@ describe("Admin Module - Integration Tests", () => {
 
     test("should generate appointment statistics", async () => {
       await Appointment.create([
-        { status: "pending" },
-        { status: "confirmed" },
-        { status: "completed" },
-        { status: "completed" },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "10:00",
+          consultationType: "video",
+          status: "pending",
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "11:00",
+          consultationType: "video",
+          status: "confirmed",
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "12:00",
+          consultationType: "video",
+          status: "completed",
+        },
+        {
+          patient: new mongoose.Types.ObjectId(),
+          doctor: new mongoose.Types.ObjectId(),
+          date: new Date(),
+          time: "13:00",
+          consultationType: "video",
+          status: "completed",
+        },
       ]);
 
       const stats = {
@@ -294,9 +382,30 @@ describe("Admin Module - Integration Tests", () => {
 
     test("should calculate emergency statistics", async () => {
       await EmergencyCase.create([
-        { severity: "critical", status: "pending" },
-        { severity: "critical", status: "pending" },
-        { severity: "high", status: "resolved" },
+        {
+          severity: "critical",
+          status: "PENDING",
+          patient: new mongoose.Types.ObjectId(),
+          description: "test",
+          latitude: 1,
+          longitude: 1,
+        },
+        {
+          severity: "critical",
+          status: "PENDING",
+          patient: new mongoose.Types.ObjectId(),
+          description: "test",
+          latitude: 1,
+          longitude: 1,
+        },
+        {
+          severity: "high",
+          status: "RESOLVED",
+          patient: new mongoose.Types.ObjectId(),
+          description: "test",
+          latitude: 1,
+          longitude: 1,
+        },
       ]);
 
       const stats = {
@@ -304,8 +413,8 @@ describe("Admin Module - Integration Tests", () => {
         critical: await EmergencyCase.countDocuments({
           severity: "critical",
         }),
-        pending: await EmergencyCase.countDocuments({ status: "pending" }),
-        resolved: await EmergencyCase.countDocuments({ status: "resolved" }),
+        pending: await EmergencyCase.countDocuments({ status: "PENDING" }),
+        resolved: await EmergencyCase.countDocuments({ status: "RESOLVED" }),
       };
 
       expect(stats.total).toBe(3);
@@ -319,8 +428,8 @@ describe("Admin Module - Integration Tests", () => {
       const validRoles = ["patient", "doctor", "admin", "responder"];
 
       const users = await User.create([
-        { email: "valid1@example.com", role: "patient" },
-        { email: "valid2@example.com", role: "doctor" },
+        { email: "valid1@example.com", role: "patient", passwordHash: "hash" },
+        { email: "valid2@example.com", role: "doctor", passwordHash: "hash" },
       ]);
 
       users.forEach((user) => {
@@ -332,6 +441,7 @@ describe("Admin Module - Integration Tests", () => {
       const user = await User.create({
         email: "timestamp@example.com",
         role: "patient",
+        passwordHash: "hash",
       });
 
       expect(user.createdAt).toBeDefined();
