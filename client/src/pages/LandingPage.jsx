@@ -20,6 +20,7 @@ import BlurText from "../components/animations/BlurText";
 import ScrollVelocity from "../components/animations/ScrollVelocity";
 import FallBeamBackground from "../components/animations/FallBeamBackground";
 import ThreeDSlider from "../components/animations/ThreeDSlider";
+import BeamGridBackground from "../components/animations/BeamGridBackground";
 
 import logo from "../assets/logo.png";
 import doctorImg1 from "../assets/images/landing page doctor img 11.png";
@@ -745,6 +746,10 @@ export default function LandingPage() {
                     delay: i * 0.1,
                     ease: [0.25, 0.46, 0.45, 0.94],
                   }}
+                  whileHover={{
+                    y: -8,
+                    transition: { duration: 0.35, ease: "easeOut" },
+                  }}
                 >
                   <div
                     className="lp-feature-icon w-12 h-12 flex items-center justify-center border mb-5"
@@ -761,6 +766,8 @@ export default function LandingPage() {
                   >
                     {f.desc}
                   </p>
+                  {/* Hover accent bar */}
+                  <div className="lp-feature-accent" />
                 </motion.div>
               );
             })}
@@ -771,28 +778,54 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════════════════
           3D IMAGE SLIDER
       ═══════════════════════════════════════════════ */}
-      <div className="relative border-t border-b overflow-hidden" style={{ borderColor: "rgba(26,26,26,0.06)" }}>
-        {/* Teal glow behind slider */}
+      <div className="relative" style={{ "--grid-size": "50px" }}>
+        {/* Top glow border — outside overflow-hidden so glow bleeds outward */}
         <div
-          className="absolute pointer-events-none select-none"
+          className="absolute top-0 left-0 right-0 z-20 pointer-events-none"
           style={{
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "900px",
-            height: "600px",
-            zIndex: 0,
-            background: "radial-gradient(ellipse at center, rgba(13,148,136,0.30) 0%, rgba(6,182,212,0.15) 35%, rgba(13,148,136,0.06) 60%, transparent 80%)",
-            filter: "blur(100px)",
-            borderRadius: "50%",
+            height: "2px",
+            background: "rgba(13, 148, 136, 0.6)",
+            boxShadow:
+              "0 0 8px 2px rgba(13,148,136,0.5), 0 0 20px 4px rgba(13,148,136,0.3), 0 0 40px 8px rgba(13,148,136,0.15)",
           }}
+        />
+        {/* Bottom glow border — outside overflow-hidden so glow bleeds outward */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
+          style={{
+            height: "2px",
+            background: "rgba(13, 148, 136, 0.6)",
+            boxShadow:
+              "0 0 8px 2px rgba(13,148,136,0.5), 0 0 20px 4px rgba(13,148,136,0.3), 0 0 40px 8px rgba(13,148,136,0.15)",
+          }}
+        />
+        {/* Inner container with overflow-hidden for slider content */}
+        <div className="relative overflow-hidden">
+        {/* Beam Grid Background Animation */}
+        <BeamGridBackground
+          gridSize={50}
+          gridColor="rgba(13, 148, 136, 0.06)"
+          beamColor="rgba(13, 148, 136, 0.5)"
+          darkBeamColor="rgba(13, 148, 136, 0.5)"
+          beamSpeed={0.12}
+          beamThickness={3}
+          beamGlow={true}
+          glowIntensity={70}
+          beamCount={10}
+          extraBeamCount={4}
+          idleSpeed={1.2}
+          interactive={true}
+          asBackground={true}
+          showFade={true}
+          fadeIntensity={25}
         />
         <ThreeDSlider
           items={sliderItems}
           speedWheel={0.05}
           speedDrag={-0.15}
-          containerStyle={{ height: "80vh" }}
+          containerStyle={{ height: "70vh", position: "relative", zIndex: 1 }}
         />
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════
@@ -910,7 +943,10 @@ export default function LandingPage() {
                 >
                   <span
                     className="lp-serif text-6xl md:text-7xl font-normal block mb-4"
-                    style={{ color: "rgba(13,148,136,0.12)" }}
+                    style={{
+                      color: "rgba(13,148,136,0.4)",
+                      textShadow: "0 0 40px rgba(13,148,136,0.2)",
+                    }}
                   >
                     {item.step}
                   </span>
@@ -961,6 +997,16 @@ export default function LandingPage() {
                 Can&apos;t find the answer you&apos;re looking for? Reach out to
                 our support team.
               </p>
+              {/* Large decorative logo */}
+              <img
+                src={logo}
+                alt="CareLine 360"
+                className="mt-8 w-40 md:w-52 lg:w-64 h-auto select-none pointer-events-none"
+                style={{
+                  opacity: 0.12,
+                  filter: "drop-shadow(0 0 30px rgba(13,148,136,0.15))",
+                }}
+              />
             </div>
 
             {/* Right FAQ items */}
@@ -976,8 +1022,10 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════════════════
           CTA SECTION
       ═══════════════════════════════════════════════ */}
-      <FadeSection className="lp-cta-section py-20 md:py-32">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-16 text-center">
+      <FadeSection className="lp-cta-section py-20 md:py-32 relative overflow-hidden">
+        {/* Falling beam animation — starts from top of CTA section */}
+        <FallBeamBackground lineCount={12} beamColorClass="teal-400" />
+        <div className="max-w-[1600px] mx-auto px-6 md:px-16 text-center relative z-10">
           <span
             className="lp-overline"
             style={{ color: "rgba(249,248,246,0.4)" }}
@@ -1033,7 +1081,7 @@ export default function LandingPage() {
           FOOTER
       ═══════════════════════════════════════════════ */}
       <footer className="lp-footer py-16 md:py-20">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-16">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-16 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
             {/* Brand */}
             <div className="md:col-span-4">
