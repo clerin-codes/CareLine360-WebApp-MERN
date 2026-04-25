@@ -11,6 +11,14 @@ const emergencyCaseSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        title: {
+            type: String,
+        },
+        severity: {
+            type: String,
+            enum: ['critical', 'high', 'medium', 'low'],
+            default: 'medium',
+        },
         status: {
             type: String,
             enum: ['PENDING', 'DISPATCHED', 'ARRIVED', 'RESOLVED'],

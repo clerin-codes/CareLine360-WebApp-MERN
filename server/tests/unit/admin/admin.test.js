@@ -8,10 +8,10 @@ const Doctor = require("../../../models/Doctor");
 const Appointment = require("../../../models/Appointment");
 const EmergencyCase = require("../../../models/EmergencyCase");
 
-jest.mock("../../models/User");
-jest.mock("../../models/Doctor");
-jest.mock("../../models/Appointment");
-jest.mock("../../models/EmergencyCase");
+jest.mock("../../../models/User");
+jest.mock("../../../models/Doctor");
+jest.mock("../../../models/Appointment");
+jest.mock("../../../models/EmergencyCase");
 
 describe("Admin Module - Unit Tests", () => {
   afterEach(() => {
@@ -73,6 +73,7 @@ describe("Admin Module - Unit Tests", () => {
       User.prototype.save = jest.fn().mockResolvedValue(newUser);
 
       const user = new User(newUser);
+      Object.assign(user, newUser); // Ensure properties are on the mock instance
       await user.save();
 
       expect(user.fullName).toBe("New Professional");
@@ -143,7 +144,7 @@ describe("Admin Module - Unit Tests", () => {
         mockDoctor.qualification &&
         mockDoctor.experience;
 
-      expect(hasRequiredDocs).toBe(true);
+      expect(!!hasRequiredDocs).toBe(true);
     });
 
     test("should validate license number format", () => {

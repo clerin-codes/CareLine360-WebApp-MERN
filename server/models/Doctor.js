@@ -40,6 +40,11 @@ const doctorSchema = new mongoose.Schema(
 
     availabilitySlots: [availabilitySlotSchema],
 
+    status: {
+      type: String,
+      enum: ["PENDING", "VERIFIED", "REJECTED"],
+      default: "PENDING",
+    },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
