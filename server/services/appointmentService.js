@@ -2,6 +2,22 @@ const Appointment = require("../models/Appointment");
 const User = require("../models/User");
 const emailService = require("./emailService");
 
+const getAppointmentStats = async (userId, role) => {
+  const match = {};
+  if (role === "patient") match.patient = userId;
+  if (role === "doctor") match.doctor = userId;
+
+  const [total, pending, confirmed, completed, cancelled] = await Promise.all([
+    Appointment.countDocuments(match),
+    Appointment.countDocuments({ ...match, status: "pending" }),
+    Appointment.countDocuments({ ...match, status: "confirmed" }),
+    Appointment.countDocuments({ ...match, status: "completed" }),
+    Appointment.countDocuments({ ...match, status: "cancelled" }),
+  ]);
+
+  return { total, pending, confirmed, completed, cancelled };
+};
+
 const VALID_TRANSITIONS = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["completed", "cancelled"],
@@ -89,12 +105,24 @@ const getAppointments = async (filters = {}) => {
 };
 
 const getAppointmentById = async (id) => {
-  const appointment = await Appointment.findById(id).populate("patient doctor");
+  const appointment = await Appointment.findById(id).populate("patient doctor").lean();
   if (!appointment) {
     const error = new Error("Appointment not found");
     error.statusCode = 404;
     throw error;
   }
+
+  // Enrich with Doctor profile (fullName, specialization, avatarUrl) from Doctor model
+  if (appointment.doctor?._id) {
+    const Doctor = require("../models/Doctor");
+    const doctorProfile = await Doctor.findOne({ userId: appointment.doctor._id, isDeleted: false })
+      .select("fullName specialization avatarUrl doctorId")
+      .lean();
+    if (doctorProfile) {
+      appointment.doctorProfile = doctorProfile;
+    }
+  }
+
   return appointment;
 };
 
@@ -251,4 +279,5 @@ module.exports = {
   transitionStatus,
   rescheduleAppointment,
   cancelAppointment,
+  getAppointmentStats,
 };
